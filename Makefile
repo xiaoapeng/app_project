@@ -41,5 +41,6 @@ distclean:
 	rm  -f  $(shell  find  -name  "*.d") 
 	rm  -f  $(subst /,.out,$(obj-y))
 
-
+install:
+	cp *.out /home/plz/nfs/fs_linux_3.4.2/drv/
  
