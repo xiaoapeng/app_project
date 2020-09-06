@@ -52,8 +52,6 @@ void lcd_put_pixel(int x, int y, unsigned int color)
 			printf("can't surport  %dbpp ",fb_var.bits_per_pixel);
 			break;
 	}
-
-	
 }
 
 void lcd_put_ascii(int x, int y, unsigned char c)

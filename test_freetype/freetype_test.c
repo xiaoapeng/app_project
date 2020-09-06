@@ -51,9 +51,10 @@ show_image( void )
   for ( i = 0; i < HEIGHT; i++ )
   {
     for ( j = 0; j < WIDTH; j++ )
+    {
       putchar( image[i][j] == 0 ? ' '
                                 : image[i][j] < 128 ? '*'
-                                                    : '+' );
+    }                                               : '+' );
     putchar( '\n' );
   }
 }

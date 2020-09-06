@@ -28,6 +28,7 @@ obj-y  +=  test_freetype/
 
 
 all  :   
+	sudo chmod a+wr ./* -R
 	make  -C  ./  -f  $(TOPDIR)/Makefile.mk
 #	$(CC)  $(LDFLAGS)  -o  $(TARGET)  built-in.o 
 
