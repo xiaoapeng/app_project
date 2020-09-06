@@ -52,11 +52,13 @@ show_image( void )
   {
     for ( j = 0; j < WIDTH; j++ )
       putchar( image[i][j] == 0 ? ' '
-                                : image[i][j] < 128 ? '██'
-                                                    : '+' );
+                                : image[i][j] < 128 ? '+'
+                                                    : '*' );
     putchar( '\n' );
   }
 }
+
+
 
 
 
@@ -110,6 +112,8 @@ int main(int argc,char **argv)
 	/* error handling omitted */
 	
 	FT_Set_Pixel_Sizes(face, 24, 0);
+
+	printf("face->num_faces = %d\n",face->num_faces );
 	
 	slot = face->glyph;
 
@@ -135,7 +139,7 @@ int main(int argc,char **argv)
 	  error = FT_Load_Char( face, unicode_str[n], FT_LOAD_RENDER );
 	  if ( error )
 		continue;				  /* ignore errors */
-	
+	 	
 	  /* now, draw to our target surface (convert position) */
 	  draw_bitmap( &slot->bitmap,
 				   slot->bitmap_left,
