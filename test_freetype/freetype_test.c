@@ -3,15 +3,16 @@
 #include <math.h>
 #include <wchar.h>
 #include <ft2build.h>
+#include <freetype/ftglyph.h>
 
 #include "utf8-to-unicode.h"
-
+#include "pixel_display.h"
 
 #include FT_FREETYPE_H
 
 
-#define WIDTH   80
-#define HEIGHT  80
+#define WIDTH   480
+#define HEIGHT  272
 /* origin is the upper left corner */
 unsigned char image[HEIGHT][WIDTH];
 
@@ -47,18 +48,26 @@ show_image( void )
 {
   int  i, j;
 
-
   for ( i = 0; i < HEIGHT; i++ )
   {
     for ( j = 0; j < WIDTH; j++ )
     {
-      putchar( image[i][j] == 0 ? ' '
-                                : image[i][j] < 128 ? '*'
-    }                                               : '+' );
-    putchar( '\n' );
+    	if(image[i][j]==0)
+    		continue;
+    	lcd_put_pixel(j,i,0xffffff);
+    }
   }
 }
 
+
+static char* text[]= {
+	"老板好",
+	"哈哈哈哈哈哈哈哈",
+	"zzzzzzzzzzzzz",
+	"hhhhhhhhh",
+
+};
+#define  TEXT_SIZE  (sizeof(text)/sizeof(text[0]))
 
 
 int main(int argc,char **argv)
@@ -70,34 +79,35 @@ int main(int argc,char **argv)
 	FT_Matrix	  matrix;				  /* transformation matrix */
 	FT_Vector	  pen;					  /* untransformed origin  */
 	FT_Error	  error;
-
+	FT_BBox 	  bbox;
+	FT_Glyph      glyph;
+	FT_Pos  	line_box_ymax=0, line_box_ymin =1000;
+	
 	char*		  filename;
-	char*		  text;
 
 	double		  angle;
 	int 		  target_height;
-	int 		  n, num_chars;
+	int 		  n, i;
 
-	struct utf8_code	  *utf8_str;
-	wchar_t 	  *unicode_str;
-	size_t		  unicode_str_len;
+	wchar_t 	  *unicode_str[TEXT_SIZE];
 	
-	if ( argc != 3 )
+	for(i=0;i<TEXT_SIZE;i++)
+		unicode_str[i]		= utf8_code_new(text[i],strlen(text[i]));
+
+
+	
+	if ( argc != 2 )
 	{
 		fprintf ( stderr, "usage: %s font sample-text\n", argv[0] );
 		exit( 1 );
 	}
-
+	if(pixel_display_init())
+		exit(1);
+	
 	
 
 	
 	filename      = argv[1];                           /* 字体文件  */
-	text		  = argv[2];						   /* 字*/
-	num_chars	  = strlen( text );
-	
-	utf8_str 		= utf8_code_new(text,num_chars);
-	unicode_str 	= utf8_to_unicode(utf8_str);
-	unicode_str_len = wcslen(unicode_str);
 
 	
 	angle		  = ( 0.0 / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/
@@ -110,8 +120,8 @@ int main(int argc,char **argv)
 	error = FT_New_Face( library, filename, 0, &face ); /* create face object */
 	/* error handling omitted */
 	
-	FT_Set_Pixel_Sizes(face, 24, 0);
-	
+	//128x128
+	FT_Set_Char_Size(face,24*64,24*64,128,128);
 	slot = face->glyph;
 
 	matrix.xx = (FT_Fixed)( cos( angle ) * 0x10000L );
@@ -123,28 +133,48 @@ int main(int argc,char **argv)
 	/* the pen position in 26.6 cartesian space coordinates; */
 	/* start at (0,40) relative to the upper left corner  */
 	pen.x = 0 * 64;
-	pen.y = ( target_height - 40 ) * 64;
+	pen.y = ( target_height-50 ) * 64;
 
-
-	
-	for ( n = 0; n < unicode_str_len; n++ )
+	// 第一行 第二行
+	for(i=0;i<( sizeof(unicode_str) / sizeof(unicode_str[0]) ) ;i++)
 	{
-	  /* set transformation */
-	  FT_Set_Transform( face, &matrix, &pen );
-	
-	  /* load glyph image into the slot (erase previous one) */
-	  error = FT_Load_Char( face, unicode_str[n], FT_LOAD_RENDER );
-	  if ( error )
-		continue;				  /* ignore errors */
-	
-	  /* now, draw to our target surface (convert position) */
-	  draw_bitmap( &slot->bitmap,
-				   slot->bitmap_left,
-				   target_height - slot->bitmap_top );
-	
-	  /* increment pen position */
-	  pen.x += slot->advance.x;
-	  pen.y += slot->advance.y;
+		line_box_ymax=0;
+		line_box_ymin =1000;
+		for ( n = 0; n < wcslen(unicode_str[i]); n++ )
+		{
+			
+			/* set transformation */
+			FT_Set_Transform( face, &matrix, &pen );
+
+			/* load glyph image into the slot (erase previous one) */
+			error = FT_Load_Char( face, unicode_str[i][n], FT_LOAD_RENDER );
+			if ( error )
+			 continue;				  /* ignore errors */
+			//多行显示代码
+			error = FT_Get_Glyph( face->glyph, &glyph );
+			if (error)
+			{
+			printf("FT_Get_Glyph error!\n");
+			return -1;
+			}
+			FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_TRUNCATE, &bbox );
+			if (line_box_ymin > bbox.yMin)
+			  line_box_ymin = bbox.yMin;
+			if (line_box_ymax < bbox.yMax)
+			  line_box_ymax = bbox.yMax;
+			/* now, draw to our target surface (convert position) */
+			draw_bitmap( &slot->bitmap,
+					   slot->bitmap_left,
+					   target_height - slot->bitmap_top );
+
+			/* increment pen position */
+			pen.x += slot->advance.x;
+			//pen.y += slot->advance.y;
+		}
+		printf("i=%d\n",i);
+		pen.y = (  pen.y/64 - (line_box_ymax - line_box_ymin) ) * 64;
+		pen.x = 0 * 64;
+		utf8_code_free(unicode_str[i]);
 	}
 
 	
@@ -152,7 +182,7 @@ int main(int argc,char **argv)
 	
 	FT_Done_Face	( face );
 	FT_Done_FreeType( library );
-	
+	pixel_display_exit();
 	return 0;
 }
 

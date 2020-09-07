@@ -5,7 +5,59 @@
 #include "utf8-to-unicode.h"
 
 
+#ifndef offsetof
+# define offsetof(type,ident) ((size_t)&(((type*)0)->ident))
+#endif
 
+#ifndef container_of
+#define container_of(ptr, type, member) ({          \
+	const typeof(((type *)0)->member)*__mptr =  (ptr);    \
+		     (type *)((char *)__mptr - offsetof(type, member)); })
+#endif
+
+
+
+
+/*	
+ * 编码转化函数
+ */
+static wchar_t * utf8_to_unicode(struct utf8_code* utf8_codep)
+{
+	wchar_t * target_code = utf8_codep->target_code;
+	unsigned char *utf8_str = (unsigned char *) utf8_codep->utf8_str;
+	size_t utf8_len = utf8_codep->utf8_len;
+	size_t i,text_i;
+	unsigned long text =0 ,tmp;
+	unsigned char var;
+	int j=0;
+	if(utf8_codep ==NULL)
+		return NULL;
+	for(i=0;i<utf8_len;i++)
+	{	
+		var = (unsigned char)utf8_str[i];
+		if( var <= 0x7F ){	//ascii码
+			target_code[j++] = var;
+			continue;
+		}
+		//正常utf8码
+		var = utf8_str[i++]<<1;
+		text = 0;
+		for(text_i=0;var & (1<<7);i++,text_i++)
+		{
+			tmp = utf8_str[i];
+			tmp &= ~(3<<6);
+			text = text << (text_i*6);
+			text |= tmp;
+			var = var << 1;
+		}
+		var = var >> (text_i+1);
+		tmp = var;
+		text |= tmp <<(text_i*6);
+		target_code[j++] = text;
+		i--;
+	}
+	return target_code;
+}
 
 
 /*计算有多少个utf8字符*/
@@ -54,7 +106,7 @@ static int utf8_wrod_count(const char *_utf8,size_t len)
  *	@len = ""
  *
  */
-struct utf8_code*  utf8_code_new(const char* str,size_t len)
+wchar_t *  utf8_code_new(const char* str,size_t len)
 {
 	struct utf8_code * utf8_codep;
 	int count ;
@@ -63,72 +115,30 @@ struct utf8_code*  utf8_code_new(const char* str,size_t len)
 	count = utf8_wrod_count(str,len);
 	if(count == 0)
 		return NULL;
-	utf8_codep = (struct utf8_code *)malloc(sizeof(struct utf8_code));
+	utf8_codep = (struct utf8_code *)malloc(sizeof(struct utf8_code) + (count+1) * sizeof(wchar_t)  );
 	if(utf8_codep == NULL)
 		return NULL;
-	memset(utf8_codep, 0, sizeof(struct utf8_code));
+	memset(utf8_codep, 0, sizeof(struct utf8_code) + (count+1) * sizeof(wchar_t)  );
 	utf8_codep->utf8_str = str;
 	utf8_codep->utf8_len = len;
-	utf8_codep->target_code = (wchar_t *) malloc( (count+1) * sizeof(wchar_t) );
-	if(utf8_codep->target_code==NULL)
-	{
-		free(utf8_codep);
-		return NULL;
-	}
-	memset(utf8_codep->target_code,0,count+1);
 	utf8_codep->target_len = count;
-	return utf8_codep;
+	return utf8_to_unicode(utf8_codep);
 }
-void  utf8_code_free(struct utf8_code* utf8_codep)
+
+
+void  utf8_code_free(wchar_t *s)
 {
-	if(utf8_codep == NULL)
+	struct utf8_code* utf8_codep ;
+	if(s == NULL)
 		return;
-	free(utf8_codep->target_code);
+		
+	utf8_codep = (struct utf8_code*) container_of(s, struct utf8_code , target_code);
+
 	free(utf8_codep);
 }
 
 
 
-/*	
- * 编码转化函数
- */
-wchar_t * utf8_to_unicode(struct utf8_code* utf8_codep)
-{
-	wchar_t * target_code = utf8_codep->target_code;
-	unsigned char *utf8_str = (unsigned char *) utf8_codep->utf8_str;
-	size_t utf8_len = utf8_codep->utf8_len;
-	size_t i,text_i;
-	unsigned long text =0 ,tmp;
-	unsigned char var;
-	int j=0;
-	if(utf8_codep ==NULL)
-		return NULL;
-	for(i=0;i<utf8_len;i++)
-	{	
-		var = (unsigned char)utf8_str[i];
-		if( var <= 0x7F ){	//ascii码
-			target_code[j++] = var;
-			continue;
-		}
-		//正常utf8码
-		var = utf8_str[i++]<<1;
-		text = 0;
-		for(text_i=0;var & (1<<7);i++,text_i++)
-		{
-			tmp = utf8_str[i];
-			tmp &= ~(3<<6);
-			text = text << (text_i*6);
-			text |= tmp;
-			var = var << 1;
-		}
-		var = var >> (text_i+1);
-		tmp = var;
-		text |= tmp <<(text_i*6);
-		target_code[j++] = text;
-		i--;
-	}
-	return target_code;
-}
 #if 0
 int main(void)
 {
