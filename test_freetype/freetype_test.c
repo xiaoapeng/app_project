@@ -61,7 +61,7 @@ show_image( void )
 
 
 static char* text[]= {
-	"老板好",
+	"嘿嘿嘿",
 	"哈哈哈哈哈哈哈哈",
 	"zzzzzzzzzzzzz",
 	"hhhhhhhhh",
@@ -147,6 +147,7 @@ int main(int argc,char **argv)
 			FT_Set_Transform( face, &matrix, &pen );
 
 			/* load glyph image into the slot (erase previous one) */
+			printf("code = 0x%08x\n",unicode_str[i][n]);
 			error = FT_Load_Char( face, unicode_str[i][n], FT_LOAD_RENDER );
 			if ( error )
 			 continue;				  /* ignore errors */
