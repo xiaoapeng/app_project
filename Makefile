@@ -14,18 +14,17 @@ export  AS  LD  CC  CPP  AR  NM
 export  STRIP  OBJCOPY  OBJDUMP 
 
 CFLAGS  :=  -Wall  -O2  -g    
-CFLAGS  +=      
+CFLAGS 	+= 
 #指定库
 LDFLAGS  := -lm -lfreetype      
 
 export  CFLAGS  LDFLAGS     
 
 TOPDIR  :=  $(shell  pwd)
- 
+export  TOPDIR 
 
-obj-y  +=  show_font/
-obj-y  +=  test_freetype/
 
+obj-y += show_file/
 
 all  :   
 	sudo chmod a+wr ./* -R
