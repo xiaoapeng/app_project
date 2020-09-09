@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
-
+#include <string.h>
 
 #include <ulist.h>
 #include <encoding_manager.h>
@@ -80,12 +80,12 @@ static inline struct CodeModule* LookingFor(unsigned long ulTargetCodeFormat)
  *		失败：NULL
  ********************************************************/
 wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat, 
-				unsigned const char *strSrcCode, unsigned long ulCodeLen)
+				const char *strSrcCode, unsigned long ulCodeLen)
 {
 	struct CodeModule* ptCodeModule;
 	ptCodeModule = LookingFor(ulTargetCodeFormat);
 	if(ptCodeModule && IsSupport(ulSrcCodeFormat,ptCodeModule))
-		return ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,strSrcCode,ulCodeLen);
+		return ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,(unsigned const char*)strSrcCode,ulCodeLen);
 	
 	//一般情况下，还有其他解决方案，比如u-f8 --> unicode     				--> GB2312
 	//可以在这里去实现
@@ -133,18 +133,18 @@ int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen)
  *		成功：目标编码数据
  *		失败：NULL
  ********************************************************/
-wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat, unsigned const char *strSrcCode, 
+wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat,  const char *strSrcCode, 
 				unsigned long ulCodeLen)
 {
 	int iID;
 	wchar_t *pdwCodeTarget;
-	iID = CodeGuess(strSrcCode, ulCodeLen);
+	iID = CodeGuess( (unsigned const char *)strSrcCode, ulCodeLen);
 	if(iID == -1)
 	{
 		printf(THIS_NAME": Try some other code. It won't recognize you automatically \n");
 		return NULL;
 	}
-	pdwCodeTarget = CodeConversion(ulTargetCodeFormat, iID, strSrcCode, ulCodeLen);
+	pdwCodeTarget = CodeConversion(iID, ulTargetCodeFormat, strSrcCode, ulCodeLen);
 	if(pdwCodeTarget == NULL)
 		printf( THIS_NAME": Convert defeat" );
 	return pdwCodeTarget;
@@ -195,9 +195,11 @@ void CodeDWFree(wchar_t *pdwStr)
 wchar_t* CodeAllocCodeData(unsigned long ulLen,unsigned long ulId)
 {
 	struct CodeDate* ptCodeDate;
+	
 	ptCodeDate=malloc(sizeof(struct CodeDate)+ulLen);
 	if( ptCodeDate==NULL)
 		return NULL;
+	memset(ptCodeDate,0,sizeof(struct CodeDate)+ulLen);
 	ptCodeDate->ulID = ulId;
 	return ptCodeDate->pdwCodeTarget;
 }

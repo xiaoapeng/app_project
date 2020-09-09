@@ -80,7 +80,7 @@ static wchar_t * utf8_to_unicode_le(unsigned const char *strSrcCode, unsigned lo
 		return NULL;
 	ptCodeDateStr = CodeAllocCodeData( (icount+1)*sizeof(wchar_t),CODE_UTF16_LE);
 	
-	for(i=0;i<ulCodeLen;i++)
+	for(i=0;ptCodeDateStr&&i<ulCodeLen;i++)
 	{	
 		var = (unsigned char)strSrcCode[i];
 		if( var <= 0x7F ){	//ascii码
@@ -110,17 +110,28 @@ static wchar_t * utf8_to_unicode_le(unsigned const char *strSrcCode, unsigned lo
 
 
 /********************************************************
- * 编码转化函数
+ * 编码转化函数  这里默认转化为 CODE_UTF16_LE 序编码
  ********************************************************/
 static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat, 
 				unsigned const char *strSrcCode,unsigned long ulCodeLen)	
 {
-	wchar_t *pdwCodeTarget;
+	wchar_t *pdwCodeTarget;	
+	unsigned short * pwtmp;
+	int i;
 	switch (ulSrcCodeFormat)
 	{
 		case CODE_UTF8 :
 			pdwCodeTarget = utf8_to_unicode_le(strSrcCode,ulCodeLen);
 			return pdwCodeTarget ;
+			break;
+		case CODE_UTF16_BE:
+			if(strSrcCode[0] == 0xfe && strSrcCode[1] == 0xff)
+				strSrcCode += 2;
+			pwtmp = (unsigned short *)strSrcCode;
+			pdwCodeTarget = CodeAllocCodeData( (ulCodeLen/2)*sizeof(wchar_t),CODE_UTF16_LE);
+			for(i=0;pdwCodeTarget&&i<ulCodeLen/2;i++)
+				pdwCodeTarget[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
+			break;
 			break;
 		default :
 			printf(MODULE_NAME": This code is not supported (Does not support ID:%lu)\n",
@@ -128,7 +139,45 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 			return NULL;
 	}
 
+}
 
+
+/********************************************************
+ * 编码转化函数 先转化为CODE_UTF16_LE编码 再转化为CODE_UTF16_BE编码
+ ********************************************************/
+static wchar_t * UnicodeBECodeGoalConversion(unsigned long ulSrcCodeFormat, 
+			unsigned const char *strSrcCode,unsigned long ulCodeLen)
+{
+	int i;
+	wchar_t *pdwCodeTargetLe;
+	unsigned char * pbtmp;
+	unsigned short * pwtmp;
+	switch (ulSrcCodeFormat)
+	{
+		case CODE_UTF8 :
+			pdwCodeTargetLe = UnicodeLECodeGoalConversion(ulSrcCodeFormat,strSrcCode,ulCodeLen);
+			for(i=0;pdwCodeTargetLe!=NULL&&pdwCodeTargetLe[i]!=0;i++)
+			{
+				pbtmp = (unsigned char *)&pdwCodeTargetLe[i];
+				pbtmp[0] ^= pbtmp[1];
+				pbtmp[1] ^= pbtmp[0];
+				pbtmp[0] ^= pbtmp[1];
+			}
+			break;
+		case CODE_UTF16_LE :
+			if(strSrcCode[0] == 0xff && strSrcCode[1] == 0xfe)
+				strSrcCode += 2;
+			pwtmp = (unsigned short *)strSrcCode;
+			pdwCodeTargetLe = CodeAllocCodeData( (ulCodeLen/2)*sizeof(wchar_t),CODE_UTF16_LE);
+			for(i=0;pdwCodeTargetLe&&i<ulCodeLen/2;i++)
+				pdwCodeTargetLe[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
+			break;
+		default :
+			printf(MODULE_NAME": This code is not supported (Does not support ID:%lu)\n",
+						ulSrcCodeFormat);
+			return NULL;
+	}
+	return pdwCodeTargetLe;
 }
 
 
@@ -160,7 +209,11 @@ void  ThisTargetCodeFree(wchar_t *pdwStr)
 
 
 static unsigned long uaUnicodeLESupportID[] = {
-	CODE_UTF8,
+	CODE_UTF8,CODE_UTF16_BE
+};
+
+static unsigned long uaUnicodeBESupportID[] = {
+	CODE_UTF8,CODE_UTF16_LE
 };
 
 static struct CodeOpr tUnicodeLEOpr ={
@@ -169,6 +222,11 @@ static struct CodeOpr tUnicodeLEOpr ={
 	.TargetCodeFree = ThisTargetCodeFree,
 };
 
+static struct CodeOpr tUnicodeBEOpr ={
+	.CodeGoalConversion = UnicodeBECodeGoalConversion,
+	.CodeIdentify = ThisCodeIdentify,
+	.TargetCodeFree = ThisTargetCodeFree,
+};
 
 
 static struct CodeModule  UnicodeLEModule = {
@@ -178,6 +236,15 @@ static struct CodeModule  UnicodeLEModule = {
 	.uNum = ARRY_SIZE(uaUnicodeLESupportID),
 	.pt_opr	=	&tUnicodeLEOpr,
 };
+
+static struct CodeModule  UnicodeBEModube = {
+	.name = "utf16-be",
+	.ulID = CODE_UTF16_BE,
+	.puSupportID = uaUnicodeBESupportID,
+	.uNum = ARRY_SIZE(uaUnicodeBESupportID),
+	.pt_opr	=	&tUnicodeBEOpr,
+};
+
 
 /********************************************************
  * 模块初始化函数
@@ -189,6 +256,12 @@ int UnicodeModuleInit(void)
 	{
 		printf(MODULE_NAME": Registration failed\n (name = %s , ID = %lu)\n",
 						UnicodeLEModule.name,UnicodeLEModule.ulID);
+		return -1;
+	}
+	if(RegisterCodeModule(&UnicodeBEModube)<0)
+	{
+		printf(MODULE_NAME": Registration failed\n (name = %s , ID = %lu)\n",
+						UnicodeBEModube.name,UnicodeBEModube.ulID);
 		return -1;
 	}
 	return 0;

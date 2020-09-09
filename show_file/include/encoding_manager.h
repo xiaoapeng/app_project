@@ -2,12 +2,7 @@
 #ifndef __CODEING_MANAGER__H_
 #define __CODEING_MANAGER__H_
 #include <ulist.h>
-
-
-#define CODE_GB2312 		0x0
-#define CODE_UTF8			0x1
-#define CODE_UTF16_LE		0x2
-#define CODE_UTF16_BE		0x3
+#include <code.h>
 
 
 
@@ -75,7 +70,7 @@ struct CodeModule{
  *		失败：NULL
  ********************************************************/
 extern wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat, 
-				unsigned const char *strSrcCode, unsigned long ulCodeLen);
+				const char *strSrcCode, unsigned long ulCodeLen);
 
 
 
@@ -104,7 +99,7 @@ extern int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen);
  *		成功：目标编码数据
  *		失败：NULL
  ********************************************************/
-extern wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat, unsigned const char *strSrcCode, 
+extern wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat, const char *strSrcCode, 
 				unsigned long ulCodeLen);
 
 /********************************************************

@@ -1,4 +1,4 @@
-CROSS_COMPILE  = arm-linux-
+CROSS_COMPILE  =
 AS  =  $(CROSS_COMPILE)as
 LD  =  $(CROSS_COMPILE)ld
 CC  =  $(CROSS_COMPILE)gcc
@@ -13,7 +13,7 @@ OBJDUMP  =  $(CROSS_COMPILE)objdump
 export  AS  LD  CC  CPP  AR  NM 
 export  STRIP  OBJCOPY  OBJDUMP 
 
-CFLAGS  :=  -Wall  -O2  -g    
+CFLAGS  :=  -Wall  -O0  -g    
 CFLAGS 	+= 
 #指定库
 LDFLAGS  := -lm -lfreetype      
