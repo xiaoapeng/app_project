@@ -57,12 +57,14 @@ $(subdir-y):
 
 # 工作目录的 .o 和子目录下的built-in.o 生成工作目录下的 built-in.o
 built-in.o  :  $(cur_objs)  $(subdir_objs) 
-	$(LD)  -r  -o  $@  $^ 
+	@$(LD)  -r  -o  $@  $^ 
+	@echo "(LD)  $@"
 
 #这里是延后展开 在使用dep_file时展开
 dep_file  =  .$@.d 
 
 %.o  :  %.c 
-	$(CC)  $(CFLAGS)  -Wp,-MD,$(dep_file)  -c  -o  $@  $<
+	@$(CC)  $(CFLAGS)  -Wp,-MD,$(dep_file)  -c  -o  $@  $<
+	@echo "(CC) $@"
 
 .PHONY  :  $(PHONY) 

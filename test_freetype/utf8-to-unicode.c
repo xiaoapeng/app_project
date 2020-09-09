@@ -132,7 +132,7 @@ void  utf8_code_free(wchar_t *s)
 	if(s == NULL)
 		return;
 		
-	utf8_codep = (struct utf8_code*) container_of(s, struct utf8_code , target_code);
+	utf8_codep = container_of(s, struct utf8_code , target_code[0]);
 
 	free(utf8_codep);
 }

@@ -53,6 +53,14 @@ struct DispDeviceInfo* GetDispInfo(char* str_Name);
  *******************************************/
 int RegisterDispDev(struct DispDevice *ptDispOpr);
 
+
+/*******************************************
+ *  删除一个屏幕驱动
+ *	参数：
+ *		屏幕的描述结构体
+ *******************************************/
+void UnregisterDispDev(struct DispDevice *ptDispOpr);
+
 /*******************************************
  *	在所有已经注册的屏幕上进行打印
  *	参数：
@@ -63,7 +71,6 @@ int RegisterDispDev(struct DispDevice *ptDispOpr);
  *		成功返回0
  *		越界打印返回-1
  *******************************************/
-
 int PixelDisplay(unsigned long x, unsigned long y, unsigned int dwColor,int flag);
 
 /*******************************************
@@ -74,7 +81,6 @@ int PixelDisplay(unsigned long x, unsigned long y, unsigned int dwColor,int flag
  *		成功返回0
  *		失败 -1
  *******************************************/
-
 int CleanScreen(unsigned int dwColor);
 
 /*******************************************
@@ -86,6 +92,7 @@ int DisplayInit(void);
  *	析构函数
  *******************************************/
 void DisplayExit(void);
+
 
 #endif /* __DISP__MANAGER__CORE__H */
 

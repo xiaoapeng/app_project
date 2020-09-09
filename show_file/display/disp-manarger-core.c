@@ -102,7 +102,16 @@ int RegisterDispDev(struct DispDevice *ptDispOpr)
 }
 
 
+/*******************************************
+ *  删除一个屏幕驱动
+ *	参数：
+ *		屏幕的描述结构体
+ *******************************************/
 
+void UnregisterDispDev(struct DispDevice *ptDispOpr)
+{
+	list_del(&ptDispOpr->node);
+}
 
 /*******************************************
  *	在所有已经注册的屏幕上进行打印
@@ -119,11 +128,13 @@ int PixelDisplay(unsigned long x, unsigned long y, unsigned int dwColor,int flag
 {
 	struct list_head *pt_Pos;
 	struct DispDevice *pt_PosDev;	
-	int err =0;
+	int err = 0;
 	list_for_each(pt_Pos, &DisplayDeviceHead)
 	{
 		pt_PosDev=list_entry(pt_Pos, struct DispDevice, node);	
-		err=__PixelDisplay(pt_PosDev,x,y,dwColor,flag);
+		err = __PixelDisplay(pt_PosDev,x,y,dwColor,flag);
+		if(err)
+			return err;
 	}
 	return err;
 }
@@ -146,6 +157,8 @@ int CleanScreen(unsigned int dwColor)
 	{
 		pt_PosDev=list_entry(pt_Pos, struct DispDevice, node);	
 		err = pt_PosDev->pt_Opr->CleanScreen(dwColor);
+		if(err)
+			return err;
 	}
 	return err;
 }
@@ -174,8 +187,6 @@ int DisplayInit(void)
 void DisplayExit(void)
 {
 	
-	//初始化核心层
-	INIT_LIST_HEAD(&DisplayDeviceHead);
 	
 	//以下可填写显示设备的退出函数
 	FbDev_exit();

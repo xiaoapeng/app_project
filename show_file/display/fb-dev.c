@@ -49,10 +49,11 @@ static int FbShowPixel(int iPenX, int iPenY, unsigned int dwColor)
 			*puwFB16bbp = ((rad>>3)<<(5+6))|((green>>2)<<5) | ( blue >> 3);
 			break;
 		case 24:
+		case 32:
 			*pudwFB24bbp = (unsigned int)dwColor;
 			break;
 		default:
-			printf("can't surport  %dbpp ",st_Var.bits_per_pixel);
+			printf("can't surport  %dbpp \n",st_Var.bits_per_pixel);
 			break;
 	}
 	return 0;
@@ -83,8 +84,9 @@ static int FbCleanScreen(unsigned int dwBackColor)
 				puwFB16bbp++;
 				i += 2;
 			}
-			break;
+			break; 
 		case 24:
+		case 32:
 			udwFB24bbp = (unsigned int)dwBackColor;
 			i=0;
 			while(i<s_iScreenSize)
@@ -95,7 +97,8 @@ static int FbCleanScreen(unsigned int dwBackColor)
 			}
 			break;
 		default:
-			printf("can't surport  %dbpp ",st_Var.bits_per_pixel);
+			printf("can't surport  %dbpp \n",st_Var.bits_per_pixel);
+			return -1;
 			break;
 	}
 	return 0;
@@ -166,6 +169,7 @@ int FbDev_init(void)
 
 void FbDev_exit(void)
 {
+	UnregisterDispDev(&t_FbDispDevice);
 	munmap(sp_FbMem, s_iScreenSize);
 	close(s_iFbFd);
 }

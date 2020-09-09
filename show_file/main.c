@@ -1,12 +1,16 @@
 #include <disp-manager-core.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 
 
 int main(void)
 {
-	int i;
+	int i,err=0;
 	struct DispDeviceInfo*  pt_FBDevInfo;
-	DisplayInit();
+	if ( DisplayInit() )
+		return -1;
 	CleanScreen(0xffffff);
 	pt_FBDevInfo=GetDispInfo("fb-dev");
 	if (pt_FBDevInfo == (struct DispDeviceInfo*)-1)
@@ -21,8 +25,11 @@ int main(void)
 	printf("bpp=%lu\n",pt_FBDevInfo->dwBPP);
 	for(i=0;i<pt_FBDevInfo->dwXres;i++) 
 	{
-		PixelDisplay(i,pt_FBDevInfo->dwYres/2,0xff0000,GENETAL_COORDINATE);
-		PixelDisplay(i,pt_FBDevInfo->dwYres/2+1,0xff0000,GENETAL_COORDINATE);
+		err=PixelDisplay(i,pt_FBDevInfo->dwYres/2,0xff0000,GENETAL_COORDINATE);
+		if(err)
+		{
+			return -1;
+		}
 	}
 	DisplayExit();
 	return 0;

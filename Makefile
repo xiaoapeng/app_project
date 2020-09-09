@@ -1,4 +1,4 @@
-CROSS_COMPILE  =arm-linux-
+CROSS_COMPILE  = arm-linux-
 AS  =  $(CROSS_COMPILE)as
 LD  =  $(CROSS_COMPILE)ld
 CC  =  $(CROSS_COMPILE)gcc
@@ -28,8 +28,7 @@ obj-y += show_file/
 
 all  :   
 	sudo chmod a+wr ./* -R
-	make  -C  ./  -f  $(TOPDIR)/Makefile.mk
-#	$(CC)  $(LDFLAGS)  -o  $(TARGET)  built-in.o 
+	make  -C  ./  -f  $(TOPDIR)/Makefile.mk 
 
 
 clean: 

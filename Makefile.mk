@@ -23,6 +23,7 @@ $(subdir-y):
 #使用子目录下的built-in.o 生成子目录下的.out文件
 #且执行make.mk脚本
 $(subdir-out):%.out:%/built-in.o 
-	$(CC)  $(LDFLAGS)  -o  $@  $^ 
+	@$(CC)  $(LDFLAGS)  -o  $@  $^
+	@echo "(CC) $@"
 	-$(patsubst  %.out,./%/make.mk,$@)
 .PHONY  :  $(PHONY) 
