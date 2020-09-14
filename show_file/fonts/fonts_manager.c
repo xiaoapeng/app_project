@@ -5,77 +5,371 @@
  *	
  *
  */
+#include <stdio.h>
+#include <wchar.h>
+
+#include <string.h>
 #include <fonts_manager.h>
-
-
-
+#include <ulist.h>
 
 #define SCREEN_USE		1
 #define SCREEN_NO_USE	0
 #define MODULE_NAME	"fonts-core"
 #define SCREEN_NUM 		4
-static struct OpenInfo ScreenDev[SCREEN_NUM];
 
+
+/**********************************************************	
+ *根据屏幕信息来推算出一个点等于多少个像素
+ *		iUseFlag			使用标准			1为使用
+ *		dwXres:				x方向像素数量
+ *		dwYres				y方向像素数量
+ *		udwPhysWidth		x方向屏幕大小 以毫米为单位
+ *		udwPhysHeight		y方向屏幕大小
+ *		udwPT				字体大小 以点为单位 
+ *		CodingFormat		编码格式
+ *		FontType			字体样式
+ **********************************************************/
+struct OpenInfo{
+	int 					iUseFlag;
+	/* 像素信息 */
+	unsigned long  			udwXres;
+	unsigned long  			udwYres;
+	/* 物理尺寸 */
+	unsigned long  			udwPhysWidth;
+	unsigned long  			udwPhysHeight;
+	int  					idwPT;	
+
+	char 					*FontType;
+	char 					*CodingFormat;
+	struct FontsChannel* 	ptFontsChannel;
+};
+
+
+
+static struct OpenInfo ScreenDev[SCREEN_NUM];
+static  struct list_head  FonsChannelHead;
+
+
+static int PixelToPt(int Pixe, struct RequirInfo * ptRequirInfo)
+{
+	double	Height_mm;
+	double	Height_inch; 
+	double	Yres;
+	double	H_DPI;		
+	double  Pixe_Height_inch;
+	double  Pt;
+	Height_mm	= (double)ptRequirInfo->udwPhysHeight;
+	Height_inch = Height_mm/25.4;			// 屏幕高多少英寸
+	Yres		= (double)ptRequirInfo->udwXres;
+	H_DPI		= Yres/Height_inch;			//计算DPI		像素/英寸
+	Pixe_Height_inch = Pixe/H_DPI;			//计算我们的像素 有多少英寸
+	Pt = Pixe_Height_inch*72;				//计算出 有多少个点
+	//进行4舍5入
+	return (int)(Pt>((int)Pt+0.5)?Pt+1:Pt);
+}
+
+static int ctrl_PixelToPt(int Pixe, struct OpenInfo * ptOpenInfo)
+{
+	double	Height_mm;
+	double	Height_inch; 
+	double	Yres;
+	double	H_DPI;		
+	double  Pixe_Height_inch;
+	double  Pt;
+	Height_mm	= (double)ptOpenInfo->udwPhysHeight;
+	Height_inch = Height_mm/25.4;			// 屏幕高多少英寸
+	Yres		= (double)ptOpenInfo->udwXres;
+	H_DPI		= Yres/Height_inch;			//计算DPI		像素/英寸
+	Pixe_Height_inch = Pixe/H_DPI;			//计算我们的像素 有多少英寸
+	Pt = Pixe_Height_inch*72;				//计算出 有多少个点
+	//进行4舍5入
+	return (int)(Pt>((int)Pt+0.5)?Pt+1:Pt);
+}
+
+
+/* 查看是否支持这种编码 */
+static inline int IsSupportCodingFormat(struct FontsChannel* ptFontsChannel,char* CodingFormat)
+{
+	char **aCodingFormat = ptFontsChannel->CodingFormatS;
+	char *temCode;
+	temCode = *aCodingFormat;
+	while(temCode != NULL)
+	{
+		if(strcmp(temCode,CodingFormat)==0)
+			return 1;
+		temCode=*(++aCodingFormat);
+	}
+	return 0;
+}
+/* open时匹配时查看是否支持该字号 */
+static int inline IsSupportFontSize(struct FontsChannel* ptFontsChannel, 
+								struct RequirInfo * ptRequirInfo)
+{
+	int idwPt = ptRequirInfo->idwPT;
+	int SupportPT = ptFontsChannel->SupportPT;
+	int SupportPixe	= ptFontsChannel->SupportPixel;
+	if(SupportPT == ALL_SIZE)
+		return 1;
+	if(SupportPT == idwPt)
+		return 1;
+	if(idwPt == PixelToPt(SupportPixe,ptRequirInfo))
+		return 1;
+	return 0;
+}
+
+/* open时匹配通道 */
+static int inline MatchChannel(struct RequirInfo * ptRequirInfo,
+								struct FontsChannel* ptFontsChannel)
+{
+	char* FontType = ptRequirInfo->FontType;
+	char* CodingFormat = ptRequirInfo->CodingFormat;
+		
+	/* 支持这种字体 */
+	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType))
+		return 0;
+	/* 支持这种编码 */
+	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
+		return 0;
+	/* 支持这种字号吗 */
+	if(IsSupportFontSize(ptFontsChannel, ptRequirInfo))
+		return 1;
+	
+	return 0;
+}
+
+/* Ctrl匹配时查看是否支持该字号 */
+static int inline ctrl_IsSupportFontSize(struct FontsChannel* ptFontsChannel, 
+								struct OpenInfo * ptOpenInfo)
+{
+	int idwPt = ptOpenInfo->idwPT;
+	int SupportPT = ptFontsChannel->SupportPT;
+	int SupportPixe	= ptFontsChannel->SupportPixel;
+	if(SupportPT == ALL_SIZE)
+		return 1;
+	if(SupportPT == idwPt)
+		return 1;
+	if(idwPt == ctrl_PixelToPt(SupportPixe,ptOpenInfo))
+		return 1;
+	return 0;
+}
+/* ctrl时匹配通道 */
+static int inline ctrl_MatchChannel(struct OpenInfo * ptOpenInfo,
+								struct FontsChannel* ptFontsChannel)
+{
+	char* FontType = ptOpenInfo->FontType;
+	char* CodingFormat = ptOpenInfo->CodingFormat;
+	
+	
+	/* 支持这种字体 */
+	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType))
+		return 0;
+	/* 支持这种编码 */
+	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
+		return 0;
+	/* 支持这种字号吗 */
+	if(ctrl_IsSupportFontSize(ptFontsChannel, ptOpenInfo))
+		return 1;
+	
+	return 0;
+}
+
+
+
+
+
+
+/* 寻找可用的描述符 */
 static int LookingForDesc(void)
 {
 	int i;
 	for(i=0;i<SCREEN_NUM;i++)
 	{
-		if(ScreenDev.iUseFlag == SCREEN_NO_USE)
+		if(ScreenDev[i].iUseFlag == SCREEN_NO_USE)
 			return i;
 	}
 	return -1;
 }
 
 
-/*
+/*****************************************************
  *	打开一个字体获取通道
  *	参数: 
  *		ptOpenInfo	 关于打开通道的信息
  *	返回值：
  *		成功返回通道描述符
  *		失败返回 -1
- */
-int Fonts_open(struct OpenInfo * ptOpenInfo)
+ *****************************************************/
+int Fonts_open(struct RequirInfo * ptRequirInfo)
 {
-	int iDesc;
-	if(ptOpenInfo == NULL)
+	struct FontsChannel* pos;
+	int iDesc,SupportFlag=0;
+	if(ptRequirInfo == NULL)
 	{
-		printf(MODULE_NAME": Use a null pointer\n")
+		printf(MODULE_NAME": Use a null pointer\n");
 		return -1;
 	}
+	if(ptRequirInfo->CodingFormat == NULL || ptRequirInfo->FontType == NULL)
+	{
+		printf(MODULE_NAME": The encoding or font string is NULL\n");
+		return -1;
+	}
+	/* 查看有哪些通道可以支持 */
+	list_for_each_entry(pos, &FonsChannelHead, ChannelNode)
+	{
+		if(MatchChannel(ptRequirInfo, pos))
+		{
+			SupportFlag = 1;
+			break;
+		}
+	}
+	if(!SupportFlag)
+	{
+		printf(MODULE_NAME": There are no Channel to support\n");
+		return -1;
+	}
+	
 	iDesc = LookingForDesc();
 	if(iDesc == -1)
 	{
 		printf(MODULE_NAME": There are no descriptors available\n");
 		return -1;
 	}
-	ScreenDev[iDesc] = *ptOpenInfo
+	
+	ScreenDev[iDesc].CodingFormat	=  ptRequirInfo->CodingFormat;
+	ScreenDev[iDesc].FontType 		=  ptRequirInfo->FontType;
+	ScreenDev[iDesc].udwPhysHeight 	=  ptRequirInfo->udwPhysHeight;	
+	ScreenDev[iDesc].udwPhysWidth 	=  ptRequirInfo->udwPhysWidth;
+	ScreenDev[iDesc].idwPT 			=  ptRequirInfo->idwPT;
+	ScreenDev[iDesc].udwXres 		=  ptRequirInfo->udwXres;
+	ScreenDev[iDesc].udwYres 		=  ptRequirInfo->udwYres;
+	ScreenDev[iDesc].ptFontsChannel =  pos;
 	ScreenDev[iDesc].iUseFlag = SCREEN_USE;
 	return iDesc;
 }
+/*****************************************************
+ *	关闭一个字体通道
+ *	参数: 
+ *		ptOpenInfo	 关于打开通道的信息
+ *	返回值：
+ *		成功返回通道描述符
+ *		失败返回 -1
+ *****************************************************/
 
 void Fonts_close(int Desc)
 {
-	ScreenDev[iDesc].iUseFlag = SCREEN_NO_USE;
+	ScreenDev[Desc].iUseFlag = SCREEN_NO_USE;
+	
 }
+
+
+int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
+{
+	struct OpenInfo * ptScreenDev = &ScreenDev[Desc];
+	struct FontsChannel* ptFontsChannel = ptScreenDev->ptFontsChannel;
+	struct FontsChannel* pos;
+	struct OpenInfo	ScreenDev_bak;
+	int SupportFlag=0;
+	switch (CMD)
+	{
+		case CMD_CTRL_CODE:
+			//更改编码
+			if(!IsSupportCodingFormat(ptFontsChannel, ctrl_to_code(Var)))
+			{
+				printf(MODULE_NAME": This coding is not supported :%s \n",ctrl_to_code(Var));
+				return -1;
+			}
+			ptScreenDev->CodingFormat = ctrl_to_code(Var);
+			break;
+		case CMD_CTRL_PT:
+			//更改字号 有且只有支持所有字号的可以更改字号
+			if(ptFontsChannel->SupportPT != ALL_SIZE)
+			{
+				printf(MODULE_NAME": Changing font size is not supported :%lu\n",ctrl_to_pt(Var));
+				return -1;
+			}
+			ptScreenDev->idwPT = ctrl_to_pt(Var);
+			break;
+		case CMD_CTRL_FONT:
+			/* 更改字体时最复杂,需要重新匹配一个通道 */
+			/* 先备份原字体与通道 */
+			ScreenDev_bak = *ptScreenDev;
+			/* 更改成新字体*/
+			ptScreenDev->CodingFormat = ctrl_to_font(Var);
+			list_for_each_entry(pos, &FonsChannelHead, ChannelNode)
+			{
+				if(ctrl_MatchChannel(ptScreenDev, pos))
+				{
+					SupportFlag = 1;
+					break;
+				}
+			}
+			if(!SupportFlag)
+			{
+				*ptScreenDev = ScreenDev_bak;
+				printf(MODULE_NAME": Changing fonts is not supported :%s\n",ctrl_to_font(Var));
+				return -1;
+			}
+			/* 成功匹配到新通道 */
+			ptScreenDev->ptFontsChannel = pos;
+			break;
+		default:
+			printf(MODULE_NAME": Use the correct command\n");
+			return -1;
+	}
+	return 0;
+}
+
+struct ImageMap* Fonts_getmap(int Desc,wchar_t Code)
+{
+	struct FontsChannel* ptFontsChannel = ScreenDev[Desc].ptFontsChannel;
+	struct ImageMap* ptImageMap;
+
+	ptImageMap=ptFontsChannel->Ops->FontsGetmap(Desc,Code);
+	ptImageMap->ptFontsChannel = ptFontsChannel;
+	return ptImageMap;
+}
+
+void Fonts_putmap(struct ImageMap* ptImageMap)
+{
+	struct FontsChannel* ptFontsChannel = ptImageMap->ptFontsChannel;
+	ptFontsChannel->Ops->FontsPutmap(ptImageMap);
+}
+
+
+
 
 
 /* 以下是提供给模块的函数 */
 
 /*****************************************
  *	注册一个字体通道
- *	
- *
- *
- *
+ *	参数：
+ *		ptFontsChannel:			通道结构体
+ *	返回值:
+ *		成功返回0
+ *		失败返回-1
  *****************************************/
-int  RegisteredFontsChannel();
-{
 
-
+int  RegisteredFontsChannel(struct FontsChannel *ptFontsChannel)
+{	
+	if(!ptFontsChannel || !ptFontsChannel->Ops)
+	{
+		printf(MODULE_NAME": Invalid parameter\n");
+		return -1;
+	}
+	if(ptFontsChannel->SupportPT == 0 && ptFontsChannel->SupportPixel == 0)
+	{
+		printf(MODULE_NAME": Don't support any sizes");
+		return -1;
+	}
+	list_add_tail(&ptFontsChannel->ChannelNode , &FonsChannelHead);
+	return 0;
 }
 
+void  UnregisteredFontsChannel(struct FontsChannel *ptFontsChannel)
+{
+	list_del(&ptFontsChannel->ChannelNode);
+}
 
 
 
@@ -92,11 +386,15 @@ int  RegisteredFontsChannel();
 
 int FontsInit(void)
 {
+	INIT_LIST_HEAD(&FonsChannelHead);
+	/* 下面填写模块初始化代码  */
 	
 
+
+	return 0;
 }
 
-int FontsExit(void)
+void FontsExit(void)
 {
 
 

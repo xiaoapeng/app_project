@@ -251,7 +251,7 @@ int main(int argc,char **argv)
 		
 		int line_box_width;
 		int line_box_height;
-		//不渲染求方框大小
+		//不渲染求 方框大小
 		num_glyphs=Get_Glyphs_Frm_Wstr(face,unicode_str[i],glyphs);
 		compute_string_bbox(glyphs, num_glyphs, &bbox);
 		line_box_width	= bbox.xMax - bbox.xMin;	//方框宽

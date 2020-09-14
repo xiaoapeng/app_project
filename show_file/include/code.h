@@ -7,5 +7,5 @@
 #define CODE_UTF16_LE		0x2
 #define CODE_UTF16_BE		0x3
 
-#ifndef 
+#endif 
 
