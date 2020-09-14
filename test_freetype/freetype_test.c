@@ -18,8 +18,8 @@
 unsigned char image[HEIGHT][WIDTH];
 
 typedef struct TGlyph_ { 
-	FT_UInt index; /* glyph index */ 
-	FT_Vector pos; /* glyph origin on the baseline */ 
+	FT_UInt index; /* glyph index 索引	*/ 
+	FT_Vector pos; /* glyph origin on the baseline 	笔的位置*/ 
 	FT_Glyph image; /* glyph image */ 
 } TGlyph, *PGlyph; 
 
@@ -40,8 +40,8 @@ int Get_Glyphs_Frm_Wstr(FT_Face face, wchar_t * wstr, TGlyph glyphs[])
 		//获取索引
 		glyph->index = FT_Get_Char_Index( face, wstr[n]); 
 		/* store current pen position */ 
-		glyph->pos.x = pen_x; 
-		glyph->pos.y = pen_y;		
+		glyph->pos.x = pen_x;
+		glyph->pos.y = pen_y;
 
 		/* load时是把glyph放入插槽face->glyph */
 		error = FT_Load_Glyph(face, glyph->index, FT_LOAD_DEFAULT);

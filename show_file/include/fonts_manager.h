@@ -3,9 +3,64 @@
 #define __NTS_MANAGER__H_
 #include <stdint.h>
 #include <ulist.h>
+#include <wchar.h>
 
-/* 支持所有字号 */
+
+
+/**********************************************************	
+ *根据屏幕信息来推算出一个点等于多少个像素
+ *		iUseFlag			使用标准			1为使用
+ *		dwXres:				x方向像素数量
+ *		dwYres				y方向像素数量
+ *		udwPhysWidth		x方向屏幕大小 以毫米为单位
+ *		udwPhysHeight		y方向屏幕大小
+ *		udwPT				字体大小 以点为单位 
+ *		iAngle				角度（顺时针方向）
+ *		CodingFormat		编码格式
+ *		FontType			字体样式
+ **********************************************************/
+struct OpenInfo{
+	int 					iUseFlag;
+	/* 像素信息 */
+	unsigned long  			udwXres;
+	unsigned long  			udwYres;
+	/* 物理尺寸 */
+	unsigned long  			udwPhysWidth;
+	unsigned long  			udwPhysHeight;
+	unsigned long			udwWDip;
+	unsigned long			udwHDip;
+	int  					idwPT;	
+	int 					iAngle;
+	char 					*FontType;
+	char 					*CodingFormat;
+	struct FontsChannel* 	ptFontsChannel;
+};
+
+ extern struct OpenInfo ScreenDev[];
+
+#define GetInfoXres(Desc)			(ScreenDev[(Desc)].udwXres)
+#define GetInfoYres(Desc)			(ScreenDev[(Desc)].udwYres)
+#define GetInfoWidth(Desc)			(ScreenDev[(Desc)].udwPhysWidth)
+#define GetInfoHeight(Desc)			(ScreenDev[(Desc)].udwPhysHeight)
+#define GetInfoPT(Desc)				(ScreenDev[(Desc)].idwPT)
+#define GetInfoFontType(Desc)		(ScreenDev[(Desc)].FontType)
+#define GetInfoCodingFormat(Desc)	(ScreenDev[(Desc)].CodingFormat)
+#define GetInfoWDip(Desc)			(ScreenDev[(Desc)].udwHDip)
+#define GetInfoHDip(Desc)			(ScreenDev[(Desc)].udwWDip)
+#define GetInfoAngle(Desc)			(ScreenDev[(Desc)].iAngle)
+
+
+
+
+
+
+/* 
+ *	ALL_SIZE	支持所有的字号
+ *	ALL_FONT	支持所有的字体
+ *
+ */
 #define ALL_SIZE 	(-1)
+#define ALL_FONT   "All font"
 /**************************************************************	
  * OPEN时需要设置的结构体
  *		dwXres:				x方向像素数量
@@ -23,7 +78,9 @@ struct RequirInfo{
 	/* 物理尺寸 */
 	unsigned long  	udwPhysWidth;	
 	unsigned long  	udwPhysHeight;
-	int  			idwPT;	
+	
+	int  			idwPT;		
+	int				iAngle;
 	char* 			CodingFormat;
 	char* 			FontType;
 };
@@ -51,6 +108,7 @@ struct RequirInfo{
 struct FontOps {
 	struct ImageMap* (*FontsGetmap)(int Desc,wchar_t Code);
 	void (*FontsPutmap)(struct ImageMap* ptImageMap);
+	int (*FontsConfig)(int Desc);
 };
 
 
@@ -77,7 +135,7 @@ struct FontsChannel{
 };
 
 
-typedef unsigned long mapU32_t;
+typedef uint32_t mapU32_t;
 
 
 /**************************************************************
@@ -99,7 +157,7 @@ static inline int __GetImageBit(mapU32_t *image, int pos)
 	mapU32_t Base = image[pos>>5];
 	/* 去除高位 */
 	pos &= 0xFFFFFFE0;
-	Base = Base << (31-Base);
+	Base = Base << (31-pos);
 	Base = Base >> 31;
 	return Base;
 }	
@@ -123,6 +181,111 @@ static inline void __SetImageBit(mapU32_t *image, int pos,int var)
 										,(x)*(ptImageMap)->Width+(y),var)
 #define GetImageWidth(ptImageMap)	((ptImageMap)->Width)
 #define GetImageHeight(ptImageMap)	((ptImageMap)->Height)
+
+
+
+
+/*****************************************************
+ *	打开一个字体获取通道
+ *	参数: 
+ *		ptOpenInfo	 关于打开通道的信息
+ *	返回值：
+ *		成功返回通道描述符
+ *		失败返回 -1
+ *****************************************************/
+extern int Fonts_open(struct RequirInfo * ptRequirInfo);
+
+/*****************************************************
+ *	关闭一个字体通道
+ *	参数: 
+ *		ptOpenInfo	 关于打开通道的信息
+ *	返回值：
+ *		成功返回通道描述符
+ *		失败返回 -1
+ *****************************************************/
+extern void Fonts_close(int Desc);
+
+/*****************************************************
+ *	关闭一个字体通道
+ *	参数: 
+ *		ptOpenInfo	 关于打开通道的信息
+ *	返回值：
+ *		成功返回通道描述符
+ *		失败返回 -1
+ *****************************************************/
+extern int Fonts_ctrl(int Desc,int CMD,intptr_t Var);
+
+/*****************************************************
+ *	获取位图
+ *	参数: 
+ *		Desc	 描述符
+ *		Code	 编码
+ *	返回值：
+ *		成功返回位图指针
+ *		失败返回 NULL
+ *****************************************************/
+extern struct ImageMap* Fonts_getmap(int Desc,wchar_t Code);
+
+/*****************************************************
+ *	释放位图
+ *	参数: 
+ *		ptImageMap	 位图指针
+ *****************************************************/
+extern void Fonts_putmap(struct ImageMap* ptImageMap);
+
+
+
+/* 以下是提供给模块的函数 */
+
+
+
+/*****************************************
+ *	注册一个字体通道
+ *	参数：
+ *		ptFontsChannel:			通道结构体
+ *	返回值:
+ *		成功返回0
+ *		失败返回-1
+ *****************************************/
+
+extern int  RegisteredFontsChannel(struct FontsChannel *ptFontsChannel);
+
+/*****************************************
+ *	注销一个字体通道
+ *	参数：
+ *		ptFontsChannel:			通道结构体
+ *****************************************/
+extern void  UnregisteredFontsChannel(struct FontsChannel *ptFontsChannel);
+
+
+/*****************************************
+ *	动态分配一个字体位图结构体
+ *	参数：
+ *		iw:			字体的宽度
+ *		ih:			字体的高度
+ *	返回值:
+ *		成功返回指针
+ *		失败返回NULL
+ *****************************************/
+extern struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih);
+
+/*****************************************
+ *	释放一个字体位图结构体
+ *	参数：
+ *		ptImageMap:			字体位图结构体
+ *****************************************/
+extern void  FontsFreeMap(struct ImageMap* ptImageMap);
+
+
+
+/* 初始化函数 */
+int FontsInit(void);
+
+
+/* 退出函数 */
+void FontsExit(void);
+
+
 
 
 

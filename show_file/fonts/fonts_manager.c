@@ -7,46 +7,22 @@
  */
 #include <stdio.h>
 #include <wchar.h>
-
+#include <stdlib.h>
 #include <string.h>
 #include <fonts_manager.h>
 #include <ulist.h>
 
 #define SCREEN_USE		1
 #define SCREEN_NO_USE	0
-#define MODULE_NAME	"fonts-core"
+#define MODULE_NAME		"fonts-core"
 #define SCREEN_NUM 		4
 
 
-/**********************************************************	
- *根据屏幕信息来推算出一个点等于多少个像素
- *		iUseFlag			使用标准			1为使用
- *		dwXres:				x方向像素数量
- *		dwYres				y方向像素数量
- *		udwPhysWidth		x方向屏幕大小 以毫米为单位
- *		udwPhysHeight		y方向屏幕大小
- *		udwPT				字体大小 以点为单位 
- *		CodingFormat		编码格式
- *		FontType			字体样式
- **********************************************************/
-struct OpenInfo{
-	int 					iUseFlag;
-	/* 像素信息 */
-	unsigned long  			udwXres;
-	unsigned long  			udwYres;
-	/* 物理尺寸 */
-	unsigned long  			udwPhysWidth;
-	unsigned long  			udwPhysHeight;
-	int  					idwPT;	
-
-	char 					*FontType;
-	char 					*CodingFormat;
-	struct FontsChannel* 	ptFontsChannel;
-};
 
 
 
-static struct OpenInfo ScreenDev[SCREEN_NUM];
+
+struct OpenInfo ScreenDev[SCREEN_NUM];
 static  struct list_head  FonsChannelHead;
 
 
@@ -125,7 +101,8 @@ static int inline MatchChannel(struct RequirInfo * ptRequirInfo,
 	char* CodingFormat = ptRequirInfo->CodingFormat;
 		
 	/* 支持这种字体 */
-	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType))
+	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType)&&
+			strcmp(ptFontsChannel->SupportFontTypeS,ALL_FONT))
 		return 0;
 	/* 支持这种编码 */
 	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
@@ -161,7 +138,8 @@ static int inline ctrl_MatchChannel(struct OpenInfo * ptOpenInfo,
 	
 	
 	/* 支持这种字体 */
-	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType))
+	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType)&&
+			strcmp(ptFontsChannel->SupportFontTypeS,ALL_FONT))
 		return 0;
 	/* 支持这种编码 */
 	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
@@ -174,10 +152,6 @@ static int inline ctrl_MatchChannel(struct OpenInfo * ptOpenInfo,
 }
 
 
-
-
-
-
 /* 寻找可用的描述符 */
 static int LookingForDesc(void)
 {
@@ -188,6 +162,19 @@ static int LookingForDesc(void)
 			return i;
 	}
 	return -1;
+}
+
+static int dip(int PhysNum_mm, int PixelNum)
+{
+	double	Phys_mm;
+	double	Phys_inch; 
+	double	Pixel;
+	double	DPI;
+	Phys_mm 	= (double)PhysNum_mm;
+	Phys_inch  	= Phys_mm/25.4;
+	Pixel	   	= (double)PixelNum;
+	DPI		   	=	Pixel/Phys_inch;
+	return (int)(DPI>((int)DPI+0.5)?DPI+1:DPI);
 }
 
 
@@ -242,8 +229,17 @@ int Fonts_open(struct RequirInfo * ptRequirInfo)
 	ScreenDev[iDesc].idwPT 			=  ptRequirInfo->idwPT;
 	ScreenDev[iDesc].udwXres 		=  ptRequirInfo->udwXres;
 	ScreenDev[iDesc].udwYres 		=  ptRequirInfo->udwYres;
+	ScreenDev[iDesc].iAngle			=  ptRequirInfo->iAngle;
 	ScreenDev[iDesc].ptFontsChannel =  pos;
+	ScreenDev[iDesc].udwWDip		=  dip(ptRequirInfo->udwPhysWidth, ptRequirInfo->udwXres);
+	ScreenDev[iDesc].udwHDip		=  dip(ptRequirInfo->udwPhysHeight, ptRequirInfo->udwYres);
 	ScreenDev[iDesc].iUseFlag = SCREEN_USE;
+	if(pos->Ops->FontsConfig(iDesc))
+	{
+		printf(MODULE_NAME": Configure channel failure\n");
+		ScreenDev[iDesc].iUseFlag = SCREEN_NO_USE;
+		return -1;
+	}
 	return iDesc;
 }
 /*****************************************************
@@ -258,9 +254,16 @@ int Fonts_open(struct RequirInfo * ptRequirInfo)
 void Fonts_close(int Desc)
 {
 	ScreenDev[Desc].iUseFlag = SCREEN_NO_USE;
-	
 }
 
+/*****************************************************
+ *	关闭一个字体通道
+ *	参数: 
+ *		ptOpenInfo	 关于打开通道的信息
+ *	返回值：
+ *		成功返回通道描述符
+ *		失败返回 -1
+ *****************************************************/
 
 int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 {
@@ -269,6 +272,11 @@ int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 	struct FontsChannel* pos;
 	struct OpenInfo	ScreenDev_bak;
 	int SupportFlag=0;
+
+	
+	/* 先备份原字体与通道 */
+	ScreenDev_bak = *ptScreenDev;
+	
 	switch (CMD)
 	{
 		case CMD_CTRL_CODE:
@@ -290,9 +298,9 @@ int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 			ptScreenDev->idwPT = ctrl_to_pt(Var);
 			break;
 		case CMD_CTRL_FONT:
+			
 			/* 更改字体时最复杂,需要重新匹配一个通道 */
-			/* 先备份原字体与通道 */
-			ScreenDev_bak = *ptScreenDev;
+
 			/* 更改成新字体*/
 			ptScreenDev->CodingFormat = ctrl_to_font(Var);
 			list_for_each_entry(pos, &FonsChannelHead, ChannelNode)
@@ -316,15 +324,35 @@ int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 			printf(MODULE_NAME": Use the correct command\n");
 			return -1;
 	}
+	if(ptScreenDev->ptFontsChannel->Ops->FontsConfig(Desc))
+	{
+		printf(MODULE_NAME": Configure channel failure\n");
+		*ptScreenDev = ScreenDev_bak;
+		return -1;
+	}
 	return 0;
 }
-
+/*****************************************************
+ *	获取位图
+ *	参数: 
+ *		Desc	 描述符
+ *		Code	 编码
+ *	返回值：
+ *		成功返回位图指针
+ *		失败返回 NULL
+ *****************************************************/
+ 
 struct ImageMap* Fonts_getmap(int Desc,wchar_t Code)
 {
 	struct FontsChannel* ptFontsChannel = ScreenDev[Desc].ptFontsChannel;
 	struct ImageMap* ptImageMap;
 
 	ptImageMap=ptFontsChannel->Ops->FontsGetmap(Desc,Code);
+	if(ptImageMap == NULL)
+	{
+		printf(MODULE_NAME": Bitmap acquisition failed\n");
+		return NULL;
+	}
 	ptImageMap->ptFontsChannel = ptFontsChannel;
 	return ptImageMap;
 }
@@ -366,21 +394,73 @@ int  RegisteredFontsChannel(struct FontsChannel *ptFontsChannel)
 	return 0;
 }
 
+
+/*****************************************
+ *	注销一个字体通道
+ *	参数：
+ *		ptFontsChannel:			通道结构体
+ *****************************************/
 void  UnregisteredFontsChannel(struct FontsChannel *ptFontsChannel)
 {
 	list_del(&ptFontsChannel->ChannelNode);
 }
 
 
+/*****************************************
+ *	动态分配一个字体位图结构体
+ *	参数：
+ *		iw:			字体的宽度
+ *		ih:			字体的高度
+ *	返回值:
+ *		成功返回指针
+ *		失败返回NULL
+ *****************************************/
+struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih)
+{
+	struct ImageMap* ptImageMap;
+	mapU32_t *image;
+	int iImageSize = 0;
+	ptImageMap = (struct ImageMap*)malloc(sizeof(struct ImageMap));
+	if(ptImageMap == NULL)
+	{
+		printf(MODULE_NAME": Space allocation failure\n");
+		return NULL;
+	}
+	ptImageMap->Width = iw;
+	ptImageMap->Height = ih;
+	iImageSize = (iw*ih + 31) >> 5;
+	image = (mapU32_t*)malloc(sizeof(mapU32_t)*iImageSize);
+	if(image == NULL)
+	{
+		free(ptImageMap);
+		printf(MODULE_NAME": Space allocation failure\n");
+		return NULL;
+	}
+	ptImageMap->image = image;
+	return ptImageMap;
+}
+
+
+
+/*****************************************
+ *	释放一个字体位图结构体
+ *	参数：
+ *		ptImageMap:			字体位图结构体
+ *****************************************/
+ void  FontsFreeMap(struct ImageMap* ptImageMap)
+{
+	if(ptImageMap == NULL)
+		return ;
+	free(ptImageMap->image);
+	free(ptImageMap);
+}
 
 
 
 
 
-
-
-
-
+extern int FreetypeInit(void);
+extern void FreetypeExit(void);
 
 
 
@@ -388,15 +468,15 @@ int FontsInit(void)
 {
 	INIT_LIST_HEAD(&FonsChannelHead);
 	/* 下面填写模块初始化代码  */
+	FreetypeInit();
 	
-
-
+	
 	return 0;
 }
 
 void FontsExit(void)
 {
-
+	FreetypeExit();
 
 }
 

@@ -131,14 +131,13 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 			pdwCodeTarget = CodeAllocCodeData( (ulCodeLen/2)*sizeof(wchar_t),CODE_UTF16_LE);
 			for(i=0;pdwCodeTarget&&i<ulCodeLen/2;i++)
 				pdwCodeTarget[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
-			break;
+			return pdwCodeTarget;
 			break;
 		default :
 			printf(MODULE_NAME": This code is not supported (Does not support ID:%lu)\n",
 						ulSrcCodeFormat);
 			return NULL;
 	}
-
 }
 
 
