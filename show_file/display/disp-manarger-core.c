@@ -33,7 +33,7 @@ __PixelDisplay(struct DispDevice *ptDispOpr,unsigned long x, unsigned long y, un
 {
 
 	struct DispDeviceInfo *tp_Info = &ptDispOpr->t_Info;
-	y = (flag == CARTESIAN_COORDINATE ? tp_Info->dwYres - y : y);
+	y = (flag == CARTESIAN_COORDINATE ? tp_Info->dwYres - y -1 : y);
 	if (x >= tp_Info->dwXres || y >= tp_Info->dwYres)
 	{
 		printf(MODULE_NAME": (x or y)Pointer to the cross-border\n x=%lu; y=%lu\n",x,y);
@@ -51,7 +51,7 @@ __PixelDisplay(struct DispDevice *ptDispOpr,unsigned long x, unsigned long y, un
  *		传入注册屏幕设备时所使用的名字
  *	返回值：
  *		返回屏幕信息的指针
- *		失败返回 -1
+ *		失败返回 NULL
  *******************************************/
 struct DispDeviceInfo* GetDispInfo(char* str_Name)
 {
@@ -64,7 +64,7 @@ struct DispDeviceInfo* GetDispInfo(char* str_Name)
 			return &pt_PosDev->t_Info;
 	}
 	printf(MODULE_NAME": GetDispInfo: %s couldn't be found\n",str_Name);
-	return (struct DispDeviceInfo*)-1;
+	return NULL;
 }
 
 
@@ -119,6 +119,7 @@ void UnregisterDispDev(struct DispDevice *ptDispOpr)
  *		x: 			x方向
  *		y: 			y方向
  *		dwColor:	颜色
+ *		flag		坐标系
  *	返回值：
  *		成功返回0
  *		越界打印返回-1

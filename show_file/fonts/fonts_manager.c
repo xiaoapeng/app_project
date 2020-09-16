@@ -103,15 +103,24 @@ static int inline MatchChannel(struct RequirInfo * ptRequirInfo,
 	/* 支持这种字体 */
 	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType)&&
 			strcmp(ptFontsChannel->SupportFontTypeS,ALL_FONT))
+	{
+		printf(MODULE_NAME": This font is not supported\n");
 		return 0;
+	}
 	/* 支持这种编码 */
 	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
+	{	
+		printf(MODULE_NAME": This coding is not supported\n");
 		return 0;
+	}
 	/* 支持这种字号吗 */
-	if(IsSupportFontSize(ptFontsChannel, ptRequirInfo))
-		return 1;
+	if(!IsSupportFontSize(ptFontsChannel, ptRequirInfo))
+	{	
+		printf(MODULE_NAME": This font type is not supported\n");
+		return 0;
+	}
 	
-	return 0;
+	return 1;
 }
 
 /* Ctrl匹配时查看是否支持该字号 */
@@ -253,6 +262,12 @@ int Fonts_open(struct RequirInfo * ptRequirInfo)
 
 void Fonts_close(int Desc)
 {
+	int error;
+	if(ScreenDev[Desc].iUseFlag == SCREEN_NO_USE)
+		return ;
+	error=ScreenDev[Desc].ptFontsChannel->Ops->FontsCleanConfig(Desc);
+	if(error)
+		printf(MODULE_NAME": Data cleanup may fail\n");
 	ScreenDev[Desc].iUseFlag = SCREEN_NO_USE;
 }
 
@@ -292,7 +307,7 @@ int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 			//更改字号 有且只有支持所有字号的可以更改字号
 			if(ptFontsChannel->SupportPT != ALL_SIZE)
 			{
-				printf(MODULE_NAME": Changing font size is not supported :%lu\n",ctrl_to_pt(Var));
+				printf(MODULE_NAME": Changing font size is not supported :%d\n",ctrl_to_pt(Var));
 				return -1;
 			}
 			ptScreenDev->idwPT = ctrl_to_pt(Var);
@@ -324,9 +339,17 @@ int Fonts_ctrl(int Desc,int CMD,intptr_t Var)
 			printf(MODULE_NAME": Use the correct command\n");
 			return -1;
 	}
+	/* 先清除原通道的配置 */
+	if(ScreenDev_bak.ptFontsChannel->Ops->FontsCleanConfig(Desc))
+	{
+		printf(MODULE_NAME": Data cleanup may fail\n	It may cause abnormal operation\n");
+		*ptScreenDev = ScreenDev_bak;
+		return -1;
+	}
+	/* 重新配置新通道 */
 	if(ptScreenDev->ptFontsChannel->Ops->FontsConfig(Desc))
 	{
-		printf(MODULE_NAME": Configure channel failure\n");
+		printf(MODULE_NAME": Configure channel failure\n	It may cause abnormal operation\n");
 		*ptScreenDev = ScreenDev_bak;
 		return -1;
 	}

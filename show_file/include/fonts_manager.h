@@ -5,6 +5,8 @@
 #include <ulist.h>
 #include <wchar.h>
 
+/* 描述符的总数 */
+#define SCREEN_NUM 		4
 
 
 /**********************************************************	
@@ -33,23 +35,24 @@ struct OpenInfo{
 	int 					iAngle;
 	char 					*FontType;
 	char 					*CodingFormat;
+	void					*PrivateData;
 	struct FontsChannel* 	ptFontsChannel;
 };
 
  extern struct OpenInfo ScreenDev[];
 
-#define GetInfoXres(Desc)			(ScreenDev[(Desc)].udwXres)
-#define GetInfoYres(Desc)			(ScreenDev[(Desc)].udwYres)
-#define GetInfoWidth(Desc)			(ScreenDev[(Desc)].udwPhysWidth)
-#define GetInfoHeight(Desc)			(ScreenDev[(Desc)].udwPhysHeight)
-#define GetInfoPT(Desc)				(ScreenDev[(Desc)].idwPT)
-#define GetInfoFontType(Desc)		(ScreenDev[(Desc)].FontType)
-#define GetInfoCodingFormat(Desc)	(ScreenDev[(Desc)].CodingFormat)
-#define GetInfoWDip(Desc)			(ScreenDev[(Desc)].udwHDip)
-#define GetInfoHDip(Desc)			(ScreenDev[(Desc)].udwWDip)
-#define GetInfoAngle(Desc)			(ScreenDev[(Desc)].iAngle)
-
-
+#define GetInfoXres(Desc)				(ScreenDev[(Desc)].udwXres)
+#define GetInfoYres(Desc)				(ScreenDev[(Desc)].udwYres)
+#define GetInfoWidth(Desc)				(ScreenDev[(Desc)].udwPhysWidth)
+#define GetInfoHeight(Desc)				(ScreenDev[(Desc)].udwPhysHeight)
+#define GetInfoPT(Desc)					(ScreenDev[(Desc)].idwPT)
+#define GetInfoFontType(Desc)			(ScreenDev[(Desc)].FontType)
+#define GetInfoCodingFormat(Desc)		(ScreenDev[(Desc)].CodingFormat)
+#define GetInfoWDip(Desc)				(ScreenDev[(Desc)].udwHDip)
+#define GetInfoHDip(Desc)				(ScreenDev[(Desc)].udwWDip)
+#define GetInfoAngle(Desc)				(ScreenDev[(Desc)].iAngle)
+#define SetInfoPrivateData(Desc,Date)	(ScreenDev[(Desc)].PrivateData = (void*)(Date))
+#define GetInfoPrivateData(Desc)		(ScreenDev[(Desc)].PrivateData)
 
 
 
@@ -109,6 +112,7 @@ struct FontOps {
 	struct ImageMap* (*FontsGetmap)(int Desc,wchar_t Code);
 	void (*FontsPutmap)(struct ImageMap* ptImageMap);
 	int (*FontsConfig)(int Desc);
+	int (*FontsCleanConfig)(int Desc);
 };
 
 
@@ -155,8 +159,8 @@ struct ImageMap{
 static inline int __GetImageBit(mapU32_t *image, int pos)
 {	
 	mapU32_t Base = image[pos>>5];
-	/* 去除高位 */
-	pos &= 0xFFFFFFE0;
+	/* 去除高位 */	
+	pos &= 0x1F;
 	Base = Base << (31-pos);
 	Base = Base >> 31;
 	return Base;
@@ -169,16 +173,16 @@ static inline void __SetImageBit(mapU32_t *image, int pos,int var)
 	mapU32_t dwValue;
 	index = pos >> 5;
 	dwValue = image[index];
-	pos &= 0xFFFFFFE0;
+	pos &= 0x1F;
 	image[index] = var ? dwValue | (1 << pos)
 					   : dwValue & (~ (1 << pos)) ;
 }
 
 
 #define GetImageBit(ptImageMap,x,y)  	__GetImageBit((ptImageMap)->image\
-										,(x)*(ptImageMap)->Width+(y))
+										,(y)*(ptImageMap)->Width+(x))
 #define SetImageBit(ptImageMap,x,y,var)	__SetImageBit((ptImageMap)->image\
-										,(x)*(ptImageMap)->Width+(y),var)
+										,(y)*(ptImageMap)->Width+(x),var)
 #define GetImageWidth(ptImageMap)	((ptImageMap)->Width)
 #define GetImageHeight(ptImageMap)	((ptImageMap)->Height)
 

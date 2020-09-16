@@ -26,7 +26,7 @@ export  TOPDIR
 
 obj-y += show_file/
 
-all  :   
+all  : 
 	sudo chmod a+wr ./* -R
 	make  -C  ./  -f  $(TOPDIR)/Makefile.mk 
 

@@ -12,12 +12,15 @@
 
 #define MODULE_NAME "freetype"
 
-static FT_Library 		g_tLibrary;
-static FT_Face 			g_tFace;
-static FT_GlyphSlot 	g_tSlot;
-static double	  		g_dAngle;
-static FT_Matrix  		gt_matrix;				  /* 变换矩阵 */ 
-static FT_Vector 		pen; /* 非变换原点 */
+
+struct freetype_module{
+	FT_Library 		g_tLibrary;
+	FT_Face 		g_tFace;
+	FT_GlyphSlot 	g_tSlot;
+	double	  		g_dAngle;
+	FT_Matrix  		gt_matrix;				/* 变换矩阵 */ 
+	FT_Vector 		pen; 					/* 非变换原点 */
+};
 
 /* 渲染到位图结构 */
 static void FreetypeDraw_bitmap( FT_Bitmap*  bitmap,
@@ -30,11 +33,46 @@ static void FreetypeDraw_bitmap( FT_Bitmap*  bitmap,
 	{
 		for ( y=0; y < y_max; y++ )
 		{
-			SetImageBit(ptImageMap, x, y,bitmap->buffer[y*bitmap->width+x] );
+			SetImageBit(ptImageMap, x, y_max-y-1,bitmap->buffer[y*bitmap->width+x] );
 		}
 	}
 }
 
+
+
+/*****************************************
+ *	清除配置函数	提供给核心层来释放配置函
+ *	数中分配的内存
+ *	
+ *	参数：
+ *		Desc: 通道描述符 通过描述符来获取信息
+ *	返回值：
+ *		成功返回0 失败返回 -1
+ *****************************************/
+static int FreetypeFontsCleanConfig(int Desc)
+{
+	int error;
+	/* 如果配置使用标志没有置位 			 那么就返回 */
+	struct freetype_module *FreetypeConfig;
+	
+	/* 取出关于本描述符的配置 */
+	FreetypeConfig = (struct freetype_module *)GetInfoPrivateData(Desc);
+	if(FreetypeConfig == NULL)
+	{
+		printf(MODULE_NAME": No configuration items\n");
+		return -1;
+	}
+	error=FT_Done_Face(FreetypeConfig->g_tFace);
+	if(error)
+		return -1;
+	FT_Done_FreeType(FreetypeConfig->g_tLibrary);
+	if(error)
+		return -1;
+	free(FreetypeConfig);
+	SetInfoPrivateData(Desc,NULL);
+	return 0;
+	
+}
 
 
 /*****************************************
@@ -44,12 +82,22 @@ static void FreetypeDraw_bitmap( FT_Bitmap*  bitmap,
  *	返回值：
  *		成功返回0 失败返回 -1
  *****************************************/
-int FreetypeFontsConfig(int Desc)
+static int FreetypeFontsConfig(int Desc)
 {
 	int iError;
 	char filename[20]; 
+	struct freetype_module *FreetypeConfig;
+
+	
+	FreetypeConfig = (struct freetype_module *)malloc(sizeof(struct freetype_module));
+	if(FreetypeConfig == NULL)
+	{
+		printf(MODULE_NAME": Failed to allocate space\n");
+		return -1;
+	}
+	SetInfoPrivateData(Desc,FreetypeConfig);
 	/* 显示矢量字体 */
-	iError = FT_Init_FreeType(&g_tLibrary );			   /* initialize library */
+	iError = FT_Init_FreeType(&FreetypeConfig->g_tLibrary );			   /* initialize library */
 	/* error handling omitted */
 	if (iError)
 	{
@@ -58,14 +106,14 @@ int FreetypeFontsConfig(int Desc)
 	}
 	strcpy(filename,GetInfoFontType(Desc));
 	strcat(filename, ".ttc");
-	iError = FT_New_Face(g_tLibrary, filename, 0, &g_tFace); /* create face object */
+	iError = FT_New_Face(FreetypeConfig->g_tLibrary, filename, 0, &FreetypeConfig->g_tFace); /* create face object */
 	if (iError)
 	{
 		printf(MODULE_NAME": FT_Init_FreeType failed\n");
 		return -1;
 	}
-	g_tSlot = g_tFace->glyph;
-	iError = FT_Set_Char_Size(g_tFace,GetInfoPT(Desc)*64,GetInfoPT(Desc)*64, 
+	FreetypeConfig->g_tSlot = FreetypeConfig->g_tFace->glyph;
+	iError = FT_Set_Char_Size(FreetypeConfig->g_tFace,GetInfoPT(Desc)*64,GetInfoPT(Desc)*64, 
 									GetInfoWDip(Desc),GetInfoHDip(Desc));
 	if (iError)
 	{
@@ -73,14 +121,14 @@ int FreetypeFontsConfig(int Desc)
 		return -1;
 	}
 	/* 注意	  这是笛卡尔坐标系   	      我们从高一点的位置开始渲染*/
-	pen.x = 0*64;
-	pen.y = GetInfoPT(Desc)*64;	
-	g_dAngle = ( ((double)GetInfoAngle(Desc)) / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/
-	gt_matrix.xx = (FT_Fixed)( cos( g_dAngle ) * 0x10000L );
-	gt_matrix.xy = (FT_Fixed)(-sin( g_dAngle ) * 0x10000L );
-	gt_matrix.yx = (FT_Fixed)( sin( g_dAngle ) * 0x10000L );
-	gt_matrix.yy = (FT_Fixed)( cos( g_dAngle ) * 0x10000L );
-	FT_Set_Transform( g_tFace, &gt_matrix, &pen );
+	FreetypeConfig->pen.x = 0*64;
+	FreetypeConfig->pen.y = GetInfoPT(Desc)*64;	
+	FreetypeConfig->g_dAngle = ( ((double)GetInfoAngle(Desc)) / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/
+	FreetypeConfig->gt_matrix.xx = (FT_Fixed)( cos( FreetypeConfig->g_dAngle ) * 0x10000L );
+	FreetypeConfig->gt_matrix.xy = (FT_Fixed)(-sin( FreetypeConfig->g_dAngle ) * 0x10000L );
+	FreetypeConfig->gt_matrix.yx = (FT_Fixed)( sin( FreetypeConfig->g_dAngle ) * 0x10000L );
+	FreetypeConfig->gt_matrix.yy = (FT_Fixed)( cos( FreetypeConfig->g_dAngle ) * 0x10000L );
+	FT_Set_Transform( FreetypeConfig->g_tFace, &FreetypeConfig->gt_matrix, &FreetypeConfig->pen );
 	return 0;
 }
 
@@ -90,14 +138,24 @@ static struct ImageMap* FreetypeFontsGetmap(int Desc,wchar_t Code)
 {
 	struct ImageMap*	ptImageMap;
 	int 				error;
+	struct freetype_module *FreetypeConfig;
+
+	/* 取出关于本描述符的配置 */
+	FreetypeConfig = (struct freetype_module *)GetInfoPrivateData(Desc);
+	if(FreetypeConfig == NULL)
+	{
+		printf(MODULE_NAME": No configuration items\n");
+		return NULL;
+	}
+	
 	/* 装载字形图像到字形槽（将会抹掉先前的字形图像） */
-	error = FT_Load_Char( g_tFace,Code, FT_LOAD_RENDER );
+	error = FT_Load_Char( FreetypeConfig->g_tFace,Code, FT_LOAD_RENDER );
 	if(error)
 		return NULL;
-	ptImageMap = FontsAllocMap(g_tSlot->bitmap.width, g_tSlot->bitmap.rows);
+	ptImageMap = FontsAllocMap(FreetypeConfig->g_tSlot->bitmap.width, FreetypeConfig->g_tSlot->bitmap.rows);
 	if(ptImageMap == NULL)
 		return NULL;	
-	FreetypeDraw_bitmap(&g_tSlot->bitmap,ptImageMap);						
+	FreetypeDraw_bitmap(&FreetypeConfig->g_tSlot->bitmap,ptImageMap);						
 	return  ptImageMap;
 }
 
@@ -111,6 +169,7 @@ static struct	FontOps FreetypeOps = {
 	.FontsGetmap = FreetypeFontsGetmap,
 	.FontsPutmap = FreetypeFontsPutmap,
 	.FontsConfig = FreetypeFontsConfig,
+	.FontsCleanConfig = FreetypeFontsCleanConfig,
 };
 
 static char	*FreetypeCodingFormatS[]={

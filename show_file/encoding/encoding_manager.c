@@ -80,12 +80,12 @@ static inline struct CodeModule* LookingFor(unsigned long ulTargetCodeFormat)
  *		失败：NULL
  ********************************************************/
 wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat, 
-				const char *strSrcCode, unsigned long ulCodeLen)
+				const char *strSrcCode, unsigned long ulCodeLen,int *pSuccessedNum)
 {
 	struct CodeModule* ptCodeModule;
 	ptCodeModule = LookingFor(ulTargetCodeFormat);
 	if(ptCodeModule && IsSupport(ulSrcCodeFormat,ptCodeModule))
-		return ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,(unsigned const char*)strSrcCode,ulCodeLen);
+		return ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,(unsigned const char*)strSrcCode,ulCodeLen,pSuccessedNum);
 	
 	//一般情况下，还有其他解决方案，比如u-f8 --> unicode     				--> GB2312
 	//可以在这里去实现
@@ -106,7 +106,7 @@ wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCo
  *		成功：目标编码代码值
  *		失败：-1
  ********************************************************/
-int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen)
+int CodeGuess(const char *strSrcCode,unsigned long ulCodeLen)
 {
 	int err;
 	struct CodeModule* pos;
@@ -114,7 +114,7 @@ int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen)
 	{
 		if(pos->pt_opr->CodeIdentify==NULL)
 			continue;
-		err = pos->pt_opr->CodeIdentify(strSrcCode,ulCodeLen);
+		err = pos->pt_opr->CodeIdentify((unsigned const char*) strSrcCode,ulCodeLen);
 		if(err>=0 && err <64)
 			return err;
 	}
@@ -134,17 +134,17 @@ int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen)
  *		失败：NULL
  ********************************************************/
 wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat,  const char *strSrcCode, 
-				unsigned long ulCodeLen)
+				unsigned long ulCodeLen,int *pSuccessedNum)
 {
 	int iID;
 	wchar_t *pdwCodeTarget;
-	iID = CodeGuess( (unsigned const char *)strSrcCode, ulCodeLen);
+	iID = CodeGuess(strSrcCode, ulCodeLen);
 	if(iID == -1)
 	{
 		printf(THIS_NAME": Try some other code. It won't recognize you automatically \n");
 		return NULL;
 	}
-	pdwCodeTarget = CodeConversion(iID, ulTargetCodeFormat, strSrcCode, ulCodeLen);
+	pdwCodeTarget = CodeConversion(iID, ulTargetCodeFormat, strSrcCode, ulCodeLen,pSuccessedNum);
 	if(pdwCodeTarget == NULL)
 		printf( THIS_NAME": Convert defeat" );
 	return pdwCodeTarget;

@@ -34,7 +34,7 @@ extern char *CodeingFormat[64];
 
 struct CodeOpr{
 	wchar_t * (*CodeGoalConversion)(unsigned long ulSrcCodeFormat, 
-			unsigned const char *strSrcCode, unsigned long ulCodeLen);	
+				unsigned const char *strSrcCode,unsigned long ulCodeLen,int *pSuccessedNum);
 	int (*CodeIdentify)(unsigned const char *strSrcCode, unsigned long ulCodeLen);	
 	void  (*TargetCodeFree)(wchar_t *pdwStr);
 };
@@ -70,7 +70,8 @@ struct CodeModule{
  *		失败：NULL
  ********************************************************/
 extern wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat, 
-				const char *strSrcCode, unsigned long ulCodeLen);
+				const char *strSrcCode, unsigned long ulCodeLen,int *pSuccessedNum);
+
 
 
 
@@ -85,7 +86,7 @@ extern wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulT
  *		成功：目标编码代码值
  *		失败：
  ********************************************************/
-extern int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen);
+extern int CodeGuess(const char *strSrcCode,unsigned long ulCodeLen);
 
 
 
@@ -99,8 +100,8 @@ extern int CodeGuess(unsigned const char *strSrcCode,unsigned long ulCodeLen);
  *		成功：目标编码数据
  *		失败：NULL
  ********************************************************/
-extern wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat, const char *strSrcCode, 
-				unsigned long ulCodeLen);
+extern wchar_t * CodeAutomaticConversion(unsigned long ulTargetCodeFormat,  const char *strSrcCode, 
+				unsigned long ulCodeLen,int *pSuccessedNum);
 
 /********************************************************
  *	当一个编码不再使用，我们应该把空间给释放掉：

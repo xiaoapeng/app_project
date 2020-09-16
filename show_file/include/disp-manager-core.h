@@ -3,7 +3,11 @@
 #include <ulist.h>
 
 
-
+/*
+ *	CARTESIAN_COORDINATE 笛卡尔坐标系
+ *	GENETAL_COORDINATE	一般屏幕坐标系
+ *
+ */
 #define CARTESIAN_COORDINATE 	1
 #define GENETAL_COORDINATE 		0
 
