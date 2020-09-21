@@ -36,8 +36,8 @@ __PixelDisplay(struct DispDevice *ptDispOpr,unsigned long x, unsigned long y, un
 	y = (flag == CARTESIAN_COORDINATE ? tp_Info->dwYres - y -1 : y);
 	if (x >= tp_Info->dwXres || y >= tp_Info->dwYres)
 	{
-		printf(MODULE_NAME": (x or y)Pointer to the cross-border\n x=%lu; y=%lu\n",x,y);
-		return -1;
+		//printf(MODULE_NAME": (x or y)Pointer to the cross-border\n x=%lu; y=%lu\n",x,y);
+		return 0;
 	}
 	if(ptDispOpr->pt_Opr->ShowPixel(x, y, dwColor))
 		return -1;

@@ -79,10 +79,10 @@ struct RequirInfo{
 	unsigned long  	udwXres;
 	unsigned long  	udwYres;
 	/* 物理尺寸 */
-	unsigned long  	udwPhysWidth;	
+	unsigned long  	udwPhysWidth;
 	unsigned long  	udwPhysHeight;
 	
-	int  			idwPT;		
+	int  			idwPT;
 	int				iAngle;
 	char* 			CodingFormat;
 	char* 			FontType;
@@ -144,15 +144,22 @@ typedef uint32_t mapU32_t;
 
 /**************************************************************
  *	点阵描述结构体
- *	image	点阵位图
- *	Width	点阵宽
- *	Height	点阵高
+ *	image			点阵位图
+ *	Width			点阵宽
+ *	Height			点阵高
+ *	BaseLinex		打印起点X坐标
+ *	BaseLiney		打印起点y坐标
+ *	Increasingx		下一次打印x方向建议的增值
+ *	基点坐标默认为 0,0
  *		点阵的大小 = ( Width * Height + 31) & 0xFFFF FFE0 / 32
  **************************************************************/
 struct ImageMap{
 	mapU32_t 	  	*image;
 	unsigned long  	Width;		
 	unsigned long  	Height;
+	int	BaseLinex;
+	int	BaseLiney;
+	int	Increasingx; 
 	struct FontsChannel *ptFontsChannel;
 };
 
@@ -185,9 +192,9 @@ static inline void __SetImageBit(mapU32_t *image, int pos,int var)
 										,(y)*(ptImageMap)->Width+(x),var)
 #define GetImageWidth(ptImageMap)	((ptImageMap)->Width)
 #define GetImageHeight(ptImageMap)	((ptImageMap)->Height)
-
-
-
+#define GetImageBaseLinex(ptImageMap) ((ptImageMap)->BaseLinex)
+#define GetImageBaseLiney(ptImageMap) ((ptImageMap)->BaseLiney)
+#define GetImageIncreasingx(ptImageMap) ((ptImageMap)->Increasingx)
 
 /*****************************************************
  *	打开一个字体获取通道
@@ -271,7 +278,7 @@ extern void  UnregisteredFontsChannel(struct FontsChannel *ptFontsChannel);
  *		成功返回指针
  *		失败返回NULL
  *****************************************/
-extern struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih);
+extern struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih,int ulBaseLinex,int ulBaseLiney,int Increasingx);
 
 /*****************************************
  *	释放一个字体位图结构体

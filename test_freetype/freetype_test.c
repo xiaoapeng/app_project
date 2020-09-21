@@ -170,7 +170,7 @@ void compute_string_bbox(TGlyph glyphs[], FT_UInt num_glyphs, FT_BBox *abbox )
 
 static char* text[]= {
 	"000",
-	"哈哈哈哈哈",
+	"哈哈哈哈g哈y人H一",
 	"5555555",
 	"66666",
 	"傻子"

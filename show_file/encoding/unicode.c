@@ -156,7 +156,7 @@ static int Utf8CodeIdentify(unsigned const char *strSrcCode, unsigned long ulCod
 
 
 
-#define MAX_SIZE 2048
+#define MAX_SIZE 4096
 
 static wchar_t * utf8_to_unicode_le(unsigned const char *strSrcCode, unsigned long ulCodeLen, int *SuccessedNum)
 {
@@ -182,7 +182,6 @@ static wchar_t * utf8_to_unicode_le(unsigned const char *strSrcCode, unsigned lo
 		ptReturnStateTmp = _utf8_state(start,strSrcCode+processor_count);
 		state = ptReturnStateTmp->itate;
 		src_count = ptReturnStateTmp->src_count;
-		printf("state = %d\n",state);
 		switch (state)
 		{
 			case STATE_ASCII:
@@ -265,9 +264,7 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 	switch (ulSrcCodeFormat)
 	{
 		case CODE_UTF8 :
-			pdwCodeTarget = utf8_to_unicode_le(strSrcCode,ulCodeLen,&SuccessedNum);
-			if(pSuccessedNum!=NULL)
-				*pSuccessedNum = SuccessedNum;
+			pdwCodeTarget = utf8_to_unicode_le(strSrcCode,ulCodeLen,pSuccessedNum);
 			
 			break;
 		case CODE_UTF16_BE:
@@ -287,9 +284,8 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 			for(i=0;pdwCodeTarget&&i<count/2;i++)
 				pdwCodeTarget[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
 
-			/* 核心层的内存分配函数 			会自动清除空间为0      		所以可以不添加\0*/			
-			if(pSuccessedNum!=NULL)
-				*pSuccessedNum = ulCodeLen & (~(1<<0));
+			/* 核心层的内存分配函数 			会自动清除空间为0      		所以可以不添加\0*/
+			*pSuccessedNum = ulCodeLen & (~(1<<0));
 			
 			break;
 		default :
@@ -315,7 +311,7 @@ static wchar_t * UnicodeBECodeGoalConversion(unsigned long ulSrcCodeFormat,
 	unsigned char * pbtmp;
 	unsigned short * pwtmp;
 	int count ;
-	
+	if(strSrcCode
 
 	switch (ulSrcCodeFormat)
 	{
@@ -347,8 +343,7 @@ static wchar_t * UnicodeBECodeGoalConversion(unsigned long ulSrcCodeFormat,
 				pdwCodeTargetLe[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
 
 			/* 核心层的内存分配函数 			会自动清除空间为0      		所以可以不添加\0*/			
-			if(pSuccessedNum!=NULL)
-				*pSuccessedNum = ulCodeLen & (~(1<<0));
+			*pSuccessedNum = ulCodeLen;
 			break;
 		default :
 			printf(MODULE_NAME": This code is not supported (Does not support ID:%lu)\n",

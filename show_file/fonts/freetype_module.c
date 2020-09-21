@@ -105,7 +105,7 @@ static int FreetypeFontsConfig(int Desc)
 		return -1;
 	}
 	strcpy(filename,GetInfoFontType(Desc));
-	strcat(filename, ".ttc");
+	strcat(filename, ".ttf");
 	iError = FT_New_Face(FreetypeConfig->g_tLibrary, filename, 0, &FreetypeConfig->g_tFace); /* create face object */
 	if (iError)
 	{
@@ -122,7 +122,7 @@ static int FreetypeFontsConfig(int Desc)
 	}
 	/* 注意	  这是笛卡尔坐标系   	      我们从高一点的位置开始渲染*/
 	FreetypeConfig->pen.x = 0*64;
-	FreetypeConfig->pen.y = GetInfoPT(Desc)*64;	
+	FreetypeConfig->pen.y = 0*64;	
 	FreetypeConfig->g_dAngle = ( ((double)GetInfoAngle(Desc)) / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/
 	FreetypeConfig->gt_matrix.xx = (FT_Fixed)( cos( FreetypeConfig->g_dAngle ) * 0x10000L );
 	FreetypeConfig->gt_matrix.xy = (FT_Fixed)(-sin( FreetypeConfig->g_dAngle ) * 0x10000L );
@@ -139,7 +139,9 @@ static struct ImageMap* FreetypeFontsGetmap(int Desc,wchar_t Code)
 	struct ImageMap*	ptImageMap;
 	int 				error;
 	struct freetype_module *FreetypeConfig;
-
+	int ulBaseLinex;
+	int ulBaseLiney;
+	int Increasingx;
 	/* 取出关于本描述符的配置 */
 	FreetypeConfig = (struct freetype_module *)GetInfoPrivateData(Desc);
 	if(FreetypeConfig == NULL)
@@ -152,10 +154,17 @@ static struct ImageMap* FreetypeFontsGetmap(int Desc,wchar_t Code)
 	error = FT_Load_Char( FreetypeConfig->g_tFace,Code, FT_LOAD_RENDER );
 	if(error)
 		return NULL;
-	ptImageMap = FontsAllocMap(FreetypeConfig->g_tSlot->bitmap.width, FreetypeConfig->g_tSlot->bitmap.rows);
+	ulBaseLinex = FreetypeConfig->g_tSlot->bitmap_left;
+	ulBaseLiney = FreetypeConfig->g_tSlot->bitmap_top - FreetypeConfig->g_tSlot->bitmap.rows ;
+	Increasingx = FreetypeConfig->g_tSlot->advance.x/64;
+	//printf("advance.x = %d ,advance.y = %d\n",FreetypeConfig->g_tSlot->advance.x,
+	//											FreetypeConfig->g_tSlot->advance.y);
+	
+	ptImageMap = FontsAllocMap(FreetypeConfig->g_tSlot->bitmap.width, 
+					FreetypeConfig->g_tSlot->bitmap.rows,ulBaseLinex,ulBaseLiney,Increasingx);
 	if(ptImageMap == NULL)
-		return NULL;	
-	FreetypeDraw_bitmap(&FreetypeConfig->g_tSlot->bitmap,ptImageMap);						
+		return NULL;
+	FreetypeDraw_bitmap(&FreetypeConfig->g_tSlot->bitmap,ptImageMap);				
 	return  ptImageMap;
 }
 
@@ -178,8 +187,8 @@ static char	*FreetypeCodingFormatS[]={
 
 static struct FontsChannel FontsChannel_songti = {
 	.name 			  = "All font",
-	.SupportFontTypeS = ALL_FONT,
-	.SupportPT		  =	ALL_SIZE,
+	.SupportFontTypeS = ALL_FONT,		/* 支持全部字体 */
+	.SupportPT		  =	ALL_SIZE,		/* 支持全部大小 */
 	.CodingFormatS	  = FreetypeCodingFormatS,
 	.Ops = &FreetypeOps,
 };

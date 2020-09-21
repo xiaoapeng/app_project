@@ -1,4 +1,4 @@
-CROSS_COMPILE  =
+CROSS_COMPILE  = arm-linux-
 AS  =  $(CROSS_COMPILE)as
 LD  =  $(CROSS_COMPILE)ld
 CC  =  $(CROSS_COMPILE)gcc
@@ -25,7 +25,7 @@ export  TOPDIR
 
 
 obj-y += show_file/
-
+obj-y += test_freetype/
 all  : 
 	sudo chmod a+wr ./* -R
 	make  -C  ./  -f  $(TOPDIR)/Makefile.mk 

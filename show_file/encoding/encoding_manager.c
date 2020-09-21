@@ -83,9 +83,16 @@ wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCo
 				const char *strSrcCode, unsigned long ulCodeLen,int *pSuccessedNum)
 {
 	struct CodeModule* ptCodeModule;
+	int SuccessedNum;
+	wchar_t *strTarget;
 	ptCodeModule = LookingFor(ulTargetCodeFormat);
 	if(ptCodeModule && IsSupport(ulSrcCodeFormat,ptCodeModule))
-		return ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,(unsigned const char*)strSrcCode,ulCodeLen,pSuccessedNum);
+	{
+		strTarget = ptCodeModule->pt_opr->CodeGoalConversion(ulSrcCodeFormat,(unsigned const char*)strSrcCode,ulCodeLen,&SuccessedNum);
+		if(pSuccessedNum)
+			*pSuccessedNum = SuccessedNum;
+		return strTarget;
+	}
 	
 	//一般情况下，还有其他解决方案，比如u-f8 --> unicode     				--> GB2312
 	//可以在这里去实现
@@ -93,6 +100,30 @@ wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCo
 }
 
 
+
+/********************************************************
+ *	测试是否可以进行编码转化
+ *	首先通过目标编码ID去寻找CodeModule
+ *	然后查看该CodeModule是否支持源ID
+ *	参数：
+ *		ulSrcCodeFormat					:源编码格式
+ *		ulTargetCodeFormat				:目标编码格式
+ *	返回值：
+ *		可行：1
+ *		不行：0
+ ********************************************************/
+
+int CodeConversionTest(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat)
+{
+	struct CodeModule* ptCodeModule;
+	int SuccessedNum;
+	ptCodeModule = LookingFor(ulTargetCodeFormat);
+	if(ptCodeModule && IsSupport(ulSrcCodeFormat,ptCodeModule))
+	{
+		return 1;
+	}
+	return 0;
+}
 
 
 
@@ -249,7 +280,6 @@ int RegisterCodeModule(struct CodeModule* pt_codeing)
 		}
 	}
 	//正常情况下
-	CodeingFormat[pt_codeing->ulID] = pt_codeing->name;
 	list_add_tail(&pt_codeing->CodeNode, &CodeHead);
 	return 0;
 }
@@ -265,7 +295,6 @@ int RegisterCodeModule(struct CodeModule* pt_codeing)
  ********************************************************/
 void UnregisterCodeModule(struct CodeModule* pt_codeing)
 {
-	CodeingFormat[pt_codeing->ulID] = NULL;
 	list_del(&pt_codeing->CodeNode);
 }
 
@@ -273,12 +302,26 @@ void UnregisterCodeModule(struct CodeModule* pt_codeing)
 extern int UnicodeModuleInit(void);
 extern void UnicodeModuleExit(void);
 
+
+
+
+
 /* 初始化函数 */
 int CodeInit(void)
 {
 	int err;
+
+	SetCodeingFormat(CODE_GB2312,"gb2312");
+	SetCodeingFormat(CODE_UTF16_BE,"utf16-be");
+	SetCodeingFormat(CODE_UTF16_LE,"utf16-le");
+	SetCodeingFormat(CODE_UTF8,"utf8");
+
+	
 	INIT_LIST_HEAD(&CodeHead);
 	//下面填写子模块的init函数
+
+
+
 	
 	err=UnicodeModuleInit();
 	if(err)

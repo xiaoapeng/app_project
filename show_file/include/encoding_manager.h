@@ -7,7 +7,7 @@
 
 
 #define CODEDEF_TO_STR(NUM)	 CodeingFormat[NUM]
-extern char *CodeingFormat[64];
+
 
 /********************************************************
  *###################子模块操作函数####################
@@ -73,7 +73,18 @@ extern wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulT
 				const char *strSrcCode, unsigned long ulCodeLen,int *pSuccessedNum);
 
 
-
+/********************************************************
+ *	测试是否可以进行编码转化
+ *	首先通过目标编码ID去寻找CodeModule
+ *	然后查看该CodeModule是否支持源ID
+ *	参数：
+ *		ulSrcCodeFormat					:源编码格式
+ *		ulTargetCodeFormat				:目标编码格式
+ *	返回值：
+ *		可行：1
+ *		不行：0
+ ********************************************************/
+extern int CodeConversionTest(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat);
 
 
 

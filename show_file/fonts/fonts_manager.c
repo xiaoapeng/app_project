@@ -438,7 +438,8 @@ void  UnregisteredFontsChannel(struct FontsChannel *ptFontsChannel)
  *		成功返回指针
  *		失败返回NULL
  *****************************************/
-struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih)
+struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih,int ulBaseLinex,
+						int ulBaseLiney,int Increasingx)
 {
 	struct ImageMap* ptImageMap;
 	mapU32_t *image;
@@ -451,6 +452,9 @@ struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih)
 	}
 	ptImageMap->Width = iw;
 	ptImageMap->Height = ih;
+	ptImageMap->BaseLiney = ulBaseLiney;
+	ptImageMap->BaseLinex = ulBaseLinex;	
+	ptImageMap->Increasingx = Increasingx;
 	iImageSize = (iw*ih + 31) >> 5;
 	image = (mapU32_t*)malloc(sizeof(mapU32_t)*iImageSize);
 	if(image == NULL)
@@ -489,11 +493,15 @@ extern void FreetypeExit(void);
 
 int FontsInit(void)
 {
+	int error;
 	INIT_LIST_HEAD(&FonsChannelHead);
 	/* 下面填写模块初始化代码  */
-	FreetypeInit();
-	
-	
+	error = FreetypeInit();
+	if(error)
+	{
+		printf(MODULE_NAME":FreetypeInit Initialization failure\n");
+		return -1;
+	}
 	return 0;
 }
 
