@@ -11,17 +11,29 @@
 #define CodeingFormatSize	64
 extern char *CodeingFormat[CodeingFormatSize];
 
+
+
+#ifdef CODEING_FORMAT
+char *CodeingFormat[64] = {
+	"gb2312",
+	"utf8",
+	"utf16-le",
+	"utf16-be",
+	NULL,
+};
+#endif /* CODEING_FORMAT */
+
+
+
+
+
 #define SetCodeingFormat(code_num,str)	CodeingFormat[(code_num)] = (str)
 #define GetCodeingFormatStr(code_num)			CodeingFormat[(code_num)]
 
 static inline int GetCodeingFormatNum(const char *strCode)
 {
 	int i;
-	if((unsigned int)Code >=CodeingFormatSize)
-	{
-		return NULL;
-	}
-	for(i=0;i<CodeingFormatSize;i++)
+	for(i=0;GetCodeingFormatStr(i) != NULL;i++)
 	{
 		if(strcmp(GetCodeingFormatStr(i),strCode ) == 0)
 			return i;

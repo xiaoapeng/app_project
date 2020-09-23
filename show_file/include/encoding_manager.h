@@ -2,7 +2,7 @@
 #ifndef __CODEING_MANAGER__H_
 #define __CODEING_MANAGER__H_
 #include <ulist.h>
-#include <code.h>
+
 
 
 
@@ -41,7 +41,7 @@ struct CodeOpr{
 
 
 struct CodeModule{
-	char *name;
+	const char *name;
 	struct CodeOpr * pt_opr;			/* 操作函数 */
 	unsigned long ulID;					/* 转化后的编码ID*/
 	unsigned long *puSupportID; 		/* 支持哪些编码的转化*/	

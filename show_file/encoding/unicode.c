@@ -11,7 +11,7 @@
 #include <string.h>
 #include <encoding_manager.h>
 #include <stdint.h>
-
+#include <code.h>
 #ifndef ARRY_SIZE
 # define ARRY_SIZE(A) (sizeof(A)/sizeof(A[0]))
 #endif
@@ -173,7 +173,8 @@ static wchar_t * utf8_to_unicode_le(unsigned const char *strSrcCode, unsigned lo
 
 	while_flag = 1;
 	Write = DestCode;
-	processor_count = ulCodeLen > MAX_SIZE ? MAX_SIZE : ulCodeLen;
+	/* 减1是因为需要存放\0的空间 */
+	processor_count = ulCodeLen > (MAX_SIZE - 1) ? (MAX_SIZE - 1) : ulCodeLen;
 	processor_count = strnlen((char *)strSrcCode,processor_count);
 	start = strSrcCode;
 	while(while_flag)
@@ -259,7 +260,6 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 {
 	wchar_t *pdwCodeTarget;	
 	unsigned short * pwtmp;
-	int SuccessedNum;
 	int i,count;
 	switch (ulSrcCodeFormat)
 	{
@@ -268,6 +268,11 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 			
 			break;
 		case CODE_UTF16_BE:
+			if(ulCodeLen<2)
+			{
+				*pSuccessedNum = 0;
+				return NULL;
+			}
 			/* 清除第0位 因为Unicode编码总是2字节对齐的*/
 			ulCodeLen &= ~(1<<0);
 			count = ulCodeLen;
@@ -282,9 +287,38 @@ static wchar_t * UnicodeLECodeGoalConversion(unsigned long ulSrcCodeFormat,
 			pdwCodeTarget = CodeAllocCodeData( ( count/2 + 1) * sizeof(wchar_t), CODE_UTF16_LE);
 			
 			for(i=0;pdwCodeTarget&&i<count/2;i++)
+			{
 				pdwCodeTarget[i]= (pwtmp[i] >> 8) | (pwtmp[i] << 8);
+				pdwCodeTarget[i] &= 0xffff;
+			}
 
 			/* 核心层的内存分配函数 			会自动清除空间为0      		所以可以不添加\0*/
+			*pSuccessedNum = ulCodeLen & (~(1<<0));
+			
+			break;
+		case CODE_UTF16_LE:
+			if(ulCodeLen<2)
+			{
+				*pSuccessedNum = 0;
+				return NULL;
+			}
+			/* 清除第0位 因为Unicode编码总是2字节对齐的*/
+			ulCodeLen &= ~(1<<0);
+			count = ulCodeLen;
+			/* 对前置编码进行检查			如果有前置编码的话 			需要滤过 */
+			if(strSrcCode[0] == 0xff && strSrcCode[1] == 0xfe)
+			{
+				strSrcCode += 2;
+				count -= 2;
+			}
+			pwtmp = (unsigned short *)strSrcCode;
+			/* 需要分配\0的空间 */
+			pdwCodeTarget = CodeAllocCodeData( ( count/2 + 1) * sizeof(wchar_t), CODE_UTF16_LE);
+			
+			for(i=0;pdwCodeTarget&&i<count/2;i++)
+				pdwCodeTarget[i]= pwtmp[i];
+			
+			/* 核心层的内存分配函数			会自动清除空间为0			所以可以不添加\0*/
 			*pSuccessedNum = ulCodeLen & (~(1<<0));
 			
 			break;
@@ -311,7 +345,6 @@ static wchar_t * UnicodeBECodeGoalConversion(unsigned long ulSrcCodeFormat,
 	unsigned char * pbtmp;
 	unsigned short * pwtmp;
 	int count ;
-	if(strSrcCode
 
 	switch (ulSrcCodeFormat)
 	{
@@ -382,7 +415,7 @@ static int ThisCodeIdentify(unsigned const char *strSrcCode,
 /********************************************************
  * 释放转化编码时所产生的数据
  ********************************************************/
-void  ThisTargetCodeFree(wchar_t *pdwStr)
+static void  ThisTargetCodeFree(wchar_t *pdwStr)
 {
 	CodeFreeCodeData(pdwStr);
 }
@@ -391,7 +424,7 @@ void  ThisTargetCodeFree(wchar_t *pdwStr)
 
 
 static unsigned long uaUnicodeLESupportID[] = {
-	CODE_UTF8,CODE_UTF16_BE
+	CODE_UTF8,CODE_UTF16_BE,CODE_UTF16_LE
 };
 
 static unsigned long uaUnicodeBESupportID[] = {
@@ -457,5 +490,6 @@ int UnicodeModuleInit(void)
 void UnicodeModuleExit(void)
 {
 	UnregisterCodeModule(&UnicodeLEModule);
+	UnregisterCodeModule(&UnicodeBEModube);
 }
 

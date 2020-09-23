@@ -18,7 +18,7 @@ __build  :  $(subdir-y)  $(subdir-out)
    
 #在子目录下执行make
 $(subdir-y):
-	make  -C  $@  -f  $(TOPDIR)/Makefile.build 
+	make  -C  $@  -f  $(TOPDIR)/Makefile.build
 
 #使用子目录下的built-in.o 生成子目录下的.out文件
 #且执行make.mk脚本

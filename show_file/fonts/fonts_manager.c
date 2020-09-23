@@ -36,7 +36,7 @@ static int PixelToPt(int Pixe, struct RequirInfo * ptRequirInfo)
 	double  Pt;
 	Height_mm	= (double)ptRequirInfo->udwPhysHeight;
 	Height_inch = Height_mm/25.4;			// 屏幕高多少英寸
-	Yres		= (double)ptRequirInfo->udwXres;
+	Yres		= (double)ptRequirInfo->udwYres;
 	H_DPI		= Yres/Height_inch;			//计算DPI		像素/英寸
 	Pixe_Height_inch = Pixe/H_DPI;			//计算我们的像素 有多少英寸
 	Pt = Pixe_Height_inch*72;				//计算出 有多少个点
@@ -88,6 +88,7 @@ static int inline IsSupportFontSize(struct FontsChannel* ptFontsChannel,
 		return 1;
 	if(SupportPT == idwPt)
 		return 1;
+		
 	if(idwPt == PixelToPt(SupportPixe,ptRequirInfo))
 		return 1;
 	return 0;
@@ -103,16 +104,10 @@ static int inline MatchChannel(struct RequirInfo * ptRequirInfo,
 	/* 支持这种字体 */
 	if(strcmp(ptFontsChannel->SupportFontTypeS,FontType)&&
 			strcmp(ptFontsChannel->SupportFontTypeS,ALL_FONT))
-	{
-		printf(MODULE_NAME": This font is not supported\n");
 		return 0;
-	}
 	/* 支持这种编码 */
 	if(!IsSupportCodingFormat(ptFontsChannel, CodingFormat))
-	{	
-		printf(MODULE_NAME": This coding is not supported\n");
 		return 0;
-	}
 	/* 支持这种字号吗 */
 	if(!IsSupportFontSize(ptFontsChannel, ptRequirInfo))
 	{	
@@ -377,6 +372,7 @@ struct ImageMap* Fonts_getmap(int Desc,wchar_t Code)
 		return NULL;
 	}
 	ptImageMap->ptFontsChannel = ptFontsChannel;
+	ptImageMap->Desc = Desc;
 	return ptImageMap;
 }
 
@@ -463,6 +459,7 @@ struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih,int ulBaseLinex
 		printf(MODULE_NAME": Space allocation failure\n");
 		return NULL;
 	}
+	memset(image,0 , sizeof(mapU32_t)*iImageSize);
 	ptImageMap->image = image;
 	return ptImageMap;
 }
@@ -489,7 +486,8 @@ struct ImageMap* FontsAllocMap(unsigned long iw,unsigned long ih,int ulBaseLinex
 extern int FreetypeInit(void);
 extern void FreetypeExit(void);
 
-
+extern int HzkInit(void);
+extern void HzkExit(void);
 
 int FontsInit(void)
 {
@@ -502,13 +500,19 @@ int FontsInit(void)
 		printf(MODULE_NAME":FreetypeInit Initialization failure\n");
 		return -1;
 	}
+	error = HzkInit();
+	if(error)
+	{
+		printf(MODULE_NAME":FreetypeInit Initialization failure\n");
+		return -1;
+	}
 	return 0;
 }
 
 void FontsExit(void)
 {
 	FreetypeExit();
-
+	HzkExit();
 }
 
 

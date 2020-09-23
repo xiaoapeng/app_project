@@ -15,6 +15,8 @@
 #include <ulist.h>
 #include <encoding_manager.h>
 
+#define CODEING_FORMAT
+#include <code.h>
 
 
 #define THIS_NAME "endcoing-core"
@@ -36,7 +38,7 @@ struct CodeDate{
 	wchar_t  pdwCodeTarget[0];	/* 目标编码    	*/
 };
 
-char *CodeingFormat[64];
+
 static  struct list_head  CodeHead;
 
 
@@ -116,7 +118,6 @@ wchar_t * CodeConversion(unsigned long ulSrcCodeFormat, unsigned long ulTargetCo
 int CodeConversionTest(unsigned long ulSrcCodeFormat, unsigned long ulTargetCodeFormat)
 {
 	struct CodeModule* ptCodeModule;
-	int SuccessedNum;
 	ptCodeModule = LookingFor(ulTargetCodeFormat);
 	if(ptCodeModule && IsSupport(ulSrcCodeFormat,ptCodeModule))
 	{
@@ -302,31 +303,23 @@ void UnregisterCodeModule(struct CodeModule* pt_codeing)
 extern int UnicodeModuleInit(void);
 extern void UnicodeModuleExit(void);
 
-
+extern int Gb2312ModuleInit(void);
+extern void Gb2312ModuleExit(void);
 
 
 
 /* 初始化函数 */
 int CodeInit(void)
 {
-	int err;
-
-	SetCodeingFormat(CODE_GB2312,"gb2312");
-	SetCodeingFormat(CODE_UTF16_BE,"utf16-be");
-	SetCodeingFormat(CODE_UTF16_LE,"utf16-le");
-	SetCodeingFormat(CODE_UTF8,"utf8");
-
-	
+	int err;	
 	INIT_LIST_HEAD(&CodeHead);
 	//下面填写子模块的init函数
-
-
-
-	
 	err=UnicodeModuleInit();
 	if(err)
 		return err;
-		
+	err=Gb2312ModuleInit();
+	if(err)
+		return err;
 	return 0;
 }
 /* 退出函数 */
@@ -335,6 +328,7 @@ void CodeExit(void)
 	
 	//下面填写子模块的exit函数
 	UnicodeModuleExit();
+	Gb2312ModuleExit();
 }
 
 

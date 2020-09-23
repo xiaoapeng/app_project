@@ -25,7 +25,6 @@ export  TOPDIR
 
 
 obj-y += show_file/
-obj-y += test_freetype/
 all  : 
 	sudo chmod a+wr ./* -R
 	make  -C  ./  -f  $(TOPDIR)/Makefile.mk 

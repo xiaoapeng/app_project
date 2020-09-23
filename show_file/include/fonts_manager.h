@@ -150,17 +150,19 @@ typedef uint32_t mapU32_t;
  *	BaseLinex		打印起点X坐标
  *	BaseLiney		打印起点y坐标
  *	Increasingx		下一次打印x方向建议的增值
+ *	ptFontsChannel	该位图属于的通道
  *	基点坐标默认为 0,0
  *		点阵的大小 = ( Width * Height + 31) & 0xFFFF FFE0 / 32
  **************************************************************/
 struct ImageMap{
 	mapU32_t 	  	*image;
-	unsigned long  	Width;		
+	unsigned long  	Width;
 	unsigned long  	Height;
 	int	BaseLinex;
 	int	BaseLiney;
 	int	Increasingx; 
 	struct FontsChannel *ptFontsChannel;
+	int Desc;
 };
 
 static inline int __GetImageBit(mapU32_t *image, int pos)

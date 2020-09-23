@@ -120,7 +120,7 @@ static int FreetypeFontsConfig(int Desc)
 		printf(MODULE_NAME": FT_Set_Pixel_Sizes failed \n");
 		return -1;
 	}
-	/* 注意	  这是笛卡尔坐标系   	      我们从高一点的位置开始渲染*/
+	/* 注意	  这是笛卡尔坐标系   	    */
 	FreetypeConfig->pen.x = 0*64;
 	FreetypeConfig->pen.y = 0*64;	
 	FreetypeConfig->g_dAngle = ( ((double)GetInfoAngle(Desc)) / 360 ) * 3.14159 * 2;	  /* use 25 degrees 	*/

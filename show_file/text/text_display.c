@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include <disp-manager-core.h>
 #include <fonts_manager.h>
 #include <text_display.h>
@@ -132,8 +132,8 @@ static struct screen_map* ScreenAllocMap(void)
 	ptImageMap->Width = g_tScreenInfo->dwXres;
 	ptImageMap->Height = g_tScreenInfo->dwYres;
 	iImageSize = (ptImageMap->Width*ptImageMap->Height + 31) >> 5;
-	ptImageMap->ImageSize = iImageSize; 
-	image = (mapU32_t*)malloc(sizeof(mapU32_t)*iImageSize);
+	ptImageMap->ImageSize = sizeof(mapU32_t)*iImageSize; 
+	image = (mapU32_t*)malloc(ptImageMap->ImageSize);
 	if(image == NULL)
 	{
 		free(ptImageMap);
@@ -190,12 +190,15 @@ static inline void print_image(struct text_desc *ptTextDesc,int x,int y)
 	struct 	text_formatting  *ptTextFormatting;
 	if( x<0 || x > ptTextDesc->virt_x)
 	{
-		printf(MODULE_NAME":x cross the border\n");
+		printf(MODULE_NAME":x = %d cross the border\n",x);
 		return ;
 	}
+
+
+	
 	if( y<0 || y > ptTextDesc->virt_y)
 	{
-		printf(MODULE_NAME":y cross the border\n");
+		printf(MODULE_NAME":y = %d cross the border\n",y);
 		return ;
 	}
 	ptTextFormatting = &ptTextDesc->ptTextFormatting;
@@ -235,6 +238,11 @@ static int FontgRidding(struct text_desc *ptTextDesc,wchar_t coding)
 		printf(MODULE_NAME": Failed to get bitmap\n");
 		return TEXT_ERROR;
 	}
+	if(pen_x == 0 && GetImageBaseLinex(ptImageMap) < 0)
+	{
+		pen_x -= GetImageBaseLinex(ptImageMap);
+	}
+	
 	use_width = GetImageWidth(ptImageMap) + GetImageBaseLinex(ptImageMap);
 	x_max = GetImageWidth(ptImageMap);
 	y_max = GetImageHeight(ptImageMap);
@@ -491,6 +499,8 @@ int TextDisplay(int iDesc)
 	ptTextDesc = GetTextDesc(iDesc);
 	ptScreenMap = ptTextDesc->ptMap;
 	int x,y;
+	/* 先清屏 */
+	CleanScreen(ptTextDesc->ptTextFormatting.backg_colour);
 	for(x=0;x<GetScreenWidth(ptScreenMap);x++)
 	{
 		for(y=0;y<GetScreenHeight(ptScreenMap);y++)
@@ -499,7 +509,7 @@ int TextDisplay(int iDesc)
 			var=GetScreenBit(ptScreenMap,x,y);
 			if(var)
 			{
-				error=PixelDisplay(x, y, 0xffffff,CARTESIAN_COORDINATE );
+				error=PixelDisplay(x, y, ptTextDesc->ptTextFormatting.word_colour  ,CARTESIAN_COORDINATE );
 				if(error)
 					return -1;
 			}
@@ -518,7 +528,6 @@ void TextClean(int iDesc)
 {
 	struct text_desc *ptTextDesc;
 	struct 	screen_map* ptScreenMap;
-	int error;
 	ptTextDesc = GetTextDesc(iDesc);
 	ptScreenMap = ptTextDesc->ptMap;
 	ScreenClean(ptScreenMap);

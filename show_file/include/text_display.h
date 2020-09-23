@@ -31,7 +31,8 @@ struct text_formatting{
 	wchar_t		space_code;
 	char*		font;
 	char* 		CodingFormat;
-	
+	unsigned int 	word_colour;
+	unsigned int	backg_colour;
 };
 
 /* 
